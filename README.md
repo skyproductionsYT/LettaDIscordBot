@@ -122,7 +122,7 @@ cp .env.template .env
 
 <img width="1667" alt="image" src="https://github.com/user-attachments/assets/68978702-42d0-4630-9b83-56e3a7ce6e14" />
 
-5️⃣ Set up `scopes` and `permissions`
+5️⃣ Under `Settings` -> `Installation`, under `Guild Install` set up `scopes` and `permissions`
 
 <img width="1057" alt="image" src="https://github.com/user-attachments/assets/73921af7-7478-4b51-b388-ff30b9844d2f" />
 
