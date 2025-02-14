@@ -10,7 +10,7 @@
   <h1>Letta Discord Bot Example</h1>
 </div>
 
-Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agents that live forever and learn from experience.
+Deploy your own Discord AI chatbot built on [Letta](https://www.letta.com/), with an agent that can live forever and learn from experience.
 
 <div align="center">
 |
@@ -35,7 +35,16 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 
   - Formerly known as **MemGPT**, Letta is an open-source framework designed for building **stateful LLM applications**. Our Discord bot example showcases powerful core features of Letta.
 
-- Sending messages to and receiving messages from your Discord bot, powered by Letta.
+- Discord Bot
+
+  - Interacts with your Discord server to send and receive messages.
+    
+    <img width="400" alt="image" src="https://github.com/user-attachments/assets/a09ce294-6cec-477f-ac60-f4b52493af67" />
+  - Interacts with you through Direct Messages (DMs) and send and receive messages.
+    
+    <img width="400" alt="image" src="https://github.com/user-attachments/assets/0eabe8fa-556b-436f-9fbc-496f198ef482" />
+
+
 
 
 ## 📦 What's included
@@ -103,9 +112,31 @@ cp .env.template .env
 
 1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
 
+<img width="475" alt="image" src="https://github.com/user-attachments/assets/b57ec05b-5381-43f4-afc4-824a84abdd55" />
+
+
 2️⃣ Under `Settings` -> `General Information` of your Discord app, copy your Discord application's `Application ID` and `Public Key`, and paste them in your `.env` file.
 
+<img width="1302" alt="image" src="https://github.com/user-attachments/assets/56e55a8e-6322-48a7-9b36-afbf538db359" />
+
+
 3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
+
+<img width="1426" alt="image" src="https://github.com/user-attachments/assets/f3ba4098-c976-427c-8b3d-1811d93d2b71" />
+
+4️⃣ Enable the Privileged Gateway Intents
+
+<img width="1667" alt="image" src="https://github.com/user-attachments/assets/68978702-42d0-4630-9b83-56e3a7ce6e14" />
+
+5️⃣ Under `Settings` -> `Installation`, under `Guild Install` set up `scopes` and `permissions`
+
+<img width="1057" alt="image" src="https://github.com/user-attachments/assets/73921af7-7478-4b51-b388-ff30b9844d2f" />
+
+
+6️⃣ Install Discord Bot on your server; copy and paste `Link` on your browser.
+
+<img width="2130" alt="image" src="https://github.com/user-attachments/assets/c6e22db7-7bde-4d34-ab67-074ee5c048b0" />
+
 
 
 ## 🌐 Set up interactivity
