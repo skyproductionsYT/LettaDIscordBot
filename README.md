@@ -124,7 +124,8 @@ cp .env.template .env
 
 5️⃣ Set up `scopes` and `permissions`
 
-<img width="2075" alt="image" src="https://github.com/user-attachments/assets/f813c274-3950-4525-a92a-9f04766212e6" />
+<img width="1057" alt="image" src="https://github.com/user-attachments/assets/73921af7-7478-4b51-b388-ff30b9844d2f" />
+
 
 6️⃣ Install Discord Bot on your server; copy and paste `Link` on your browser.
 
