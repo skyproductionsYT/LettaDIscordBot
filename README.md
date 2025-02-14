@@ -7,7 +7,7 @@
 </p>
 
 <div align="center">
-  <h1>Letta Discord Bot Template</h1>
+  <h1>Letta Discord Bot Example</h1>
 </div>
 
 Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agents that live forever and learn from experience.
@@ -30,17 +30,20 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 
 - 🧠 [Letta](https://github.com/letta-ai/letta)
 
-  - Formerly known as **MemGPT**, Letta is an open-source framework designed for building **stateful LLM applications**. Our chatbot webapp template showcases powerful core features of Letta.
+  - Formerly known as **MemGPT**, Letta is an open-source framework designed for building **stateful LLM applications**. Our Discord bot example showcases powerful core features of Letta.
 
-- 👾 [Discord.js](https://discord.js.org/)
+- Sending and receiving messages from your Discord bot, powered by Letta.
 
-  - Discord.js is a Node.js library that allows you to interact with the [Discord API](https://discord.com/developers/docs/intro), making it easy to build bot applications.
 
 ## 📦 What's included
 
 - [Letta TypeScript SDK](https://github.com/letta-ai/letta-node)
 
   - The Letta TypeScript library provides convenient access to the Letta API.
+
+- [Discord.js](https://discord.js.org/)
+
+  - Discord.js is a Node.js library that allows you to interact with the [Discord API](https://discord.com/developers/docs/intro), making it easy to build bot applications.
 
 - [Express JS](https://expressjs.com)
 
@@ -71,22 +74,17 @@ Follow the [quickstart guide](https://docs.letta.com/quickstart) to run your loc
 You can run your own Letta server using [Letta Desktop](https://docs.letta.com/quickstart/desktop) or [Docker](https://docs.letta.com/quickstart/docker).
 By default, the Letta server will run on `http://localhost:8283`.
 
-#### 🔸 Create your Discord app
 
-1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
-
-[screenshots]
-
-#### 🔸 Setup and run the app
+#### 🔸 Set up app
 
 1️⃣ Clone the repository and install dependencies:
 
 ```bash
 # Clone the repository
-git clone git@github.com:letta-ai/letta-discord-bot-template.git
+git clone git@github.com:letta-ai/letta-discord-bot-example.git
 
 # Navigate to the project directory
-cd letta-discord-bot-template
+cd letta-discord-bot-example
 
 # Install dependencies
 npm install
@@ -95,15 +93,32 @@ npm install
 cp .env.template .env
 ```
 
-2️⃣ Update the `.env` file with your Letta and Discord variables
+2️⃣ Update the `.env` file with your Letta variables
 
-3️⃣ Run the app
+
+#### 🔸 Create your Discord app and set your variables
+
+1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
+
+2️⃣ Under `Settings` -> `General Information` of your Discord app, copy your Discord application's `Application ID` and `Public Key`, and paste them in your `.env` file.
+
+3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
+
+
+#### 🔸 Set up interactivity
+Discord requires a public endpoint where it can send and receive messages. You can use [LocalTunnel](https://github.com/localtunnel/localtunnel) to create a public URL that your bot can use.
+
+```bash
+# Create a tunnel
+npx localtunnel --port 3001 # Set it to whatever your app port is on. 
+```
+
+#### 🔸 Run app
 
 ```bash
 npm start
 ```
 
-#### 🔸 Setup and run the app
 
 ### Environment variables
 
@@ -119,10 +134,4 @@ The following environment variables can be set in the `.env` file:
 * `DISCORD_TOKEN`: The bot token for your Discord bot.
 * `PUBLIC_KEY`: The public key for your Discord bot.
 
-* `PORT`: The port to run the app on. This is usually `3001`.
-
-#### 🔸 See the app in action
-
-Once the app is running, open your web browser and navigate to [http://localhost:3001](http://localhost:3001).
-
-
+* `PORT`: The port to run the app on. Default is `3001`.
