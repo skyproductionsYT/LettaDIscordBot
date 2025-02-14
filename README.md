@@ -10,7 +10,7 @@
   <h1>Letta Discord Bot Example</h1>
 </div>
 
-Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agents that live forever and learn from experience.
+Deploy your own Discord AI chatbot built on [Letta](https://www.letta.com/), with an agent that can live forever and learn from experience.
 
 <div align="center">
 |
