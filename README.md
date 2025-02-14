@@ -35,7 +35,10 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 
   - Formerly known as **MemGPT**, Letta is an open-source framework designed for building **stateful LLM applications**. Our Discord bot example showcases powerful core features of Letta.
 
-- Sending messages to and receiving messages from your Discord bot, powered by Letta.
+- Discord Bot
+
+  - Interacts with your Discord server and send and receive messages.
+  - Interacts with you through Direct Messages (DMs) and send and receive messages.
 
 
 ## 📦 What's included
