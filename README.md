@@ -37,7 +37,7 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 
 - Discord Bot
 
-  - Interacts with your Discord server and send and receive messages.
+  - Interacts with your Discord server to send and receive messages.
   - Interacts with you through Direct Messages (DMs) and send and receive messages.
 
 
