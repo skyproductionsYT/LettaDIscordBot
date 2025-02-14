@@ -102,6 +102,7 @@ cp .env.template .env
 ## 👾 Create your Discord app and set your variables
 
 1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
+
 <img width="475" alt="image" src="https://github.com/user-attachments/assets/b57ec05b-5381-43f4-afc4-824a84abdd55" />
 
 
