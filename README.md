@@ -27,7 +27,7 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 > You must have a Letta server running to use this app. Follow this [quickstart guide](https://docs.letta.com/quickstart) to run your local Letta server.
 
 > [!NOTE]
-> You must also have a Discord bot to use this app. Follow these [instructions](#-create-your-discord-app) to create your Discord bot.
+> You must also have a Discord bot to use this app. Follow these [instructions](#-create-your-discord-app-and-set-your-variables) to create your Discord bot.
 
 ## ✨ Features
 
@@ -99,7 +99,7 @@ cp .env.template .env
 2️⃣ Update the `.env` file with your Letta variables
 
 
-### 🔸 Create your Discord app and set your variables
+## Create your Discord app and set your variables
 
 1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
 
@@ -108,7 +108,7 @@ cp .env.template .env
 3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
 
 
-### 🔸 Set up interactivity
+## Set up interactivity
 Discord requires a public endpoint where it can send and receive messages. You can use [LocalTunnel](https://github.com/localtunnel/localtunnel) to create a public URL that your bot can use.
 
 ```bash
@@ -116,7 +116,7 @@ Discord requires a public endpoint where it can send and receive messages. You c
 npx localtunnel --port 3001 # Set it to whatever your app port is on. 
 ```
 
-### 🔸 Run app
+## Run app
 
 ```bash
 npm start
