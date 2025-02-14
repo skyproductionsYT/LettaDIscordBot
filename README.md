@@ -38,9 +38,9 @@ Deploy your own Discord AI chatbot built on [Letta](https://www.letta.com/), wit
 - Discord Bot
 
   - Interacts with your Discord server to send and receive messages.
-    <img width="973" alt="image" src="https://github.com/user-attachments/assets/a09ce294-6cec-477f-ac60-f4b52493af67" />
+    <img width="450" alt="image" src="https://github.com/user-attachments/assets/a09ce294-6cec-477f-ac60-f4b52493af67" />
   - Interacts with you through Direct Messages (DMs) and send and receive messages.
-    <img width="886" alt="image" src="https://github.com/user-attachments/assets/0eabe8fa-556b-436f-9fbc-496f198ef482" />
+    <img width="450" alt="image" src="https://github.com/user-attachments/assets/0eabe8fa-556b-436f-9fbc-496f198ef482" />
 
 
 
