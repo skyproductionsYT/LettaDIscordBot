@@ -122,6 +122,11 @@ cp .env.template .env
 
 <img width="1667" alt="image" src="https://github.com/user-attachments/assets/68978702-42d0-4630-9b83-56e3a7ce6e14" />
 
+5️⃣ Install Discord Bot on your server; copy and paste `Link` on your browser.
+
+<img width="2130" alt="image" src="https://github.com/user-attachments/assets/c6e22db7-7bde-4d34-ab67-074ee5c048b0" />
+
+
 
 ## 🌐 Set up interactivity
 Discord requires a public endpoint where it can send and receive messages. You can use [LocalTunnel](https://github.com/localtunnel/localtunnel) to create a public URL that your bot can use.
