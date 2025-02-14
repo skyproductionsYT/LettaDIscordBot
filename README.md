@@ -69,16 +69,16 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 - [Discord App](https://discord.com/developers/applications)
 - [LocalTunnel](https://github.com/localtunnel/localtunnel)
 
-## 🚀 Running the app locally
+# 🚀 Running the app locally
 
-### 🔸 Set up your local Letta server
+## 💻 Set up your local Letta server
 
 Follow the [quickstart guide](https://docs.letta.com/quickstart) to run your local Letta server.
 You can run your own Letta server using [Letta Desktop](https://docs.letta.com/quickstart/desktop) or [Docker](https://docs.letta.com/quickstart/docker).
 By default, the Letta server will run on `http://localhost:8283`.
 
 
-### 🔸 Set up app
+## 👉 Set up app
 
 1️⃣ Clone the repository and install dependencies:
 
@@ -99,7 +99,7 @@ cp .env.template .env
 2️⃣ Update the `.env` file with your Letta variables
 
 
-## Create your Discord app and set your variables
+## 👾 Create your Discord app and set your variables
 
 1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
 
@@ -108,7 +108,7 @@ cp .env.template .env
 3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
 
 
-## Set up interactivity
+## 🌐 Set up interactivity
 Discord requires a public endpoint where it can send and receive messages. You can use [LocalTunnel](https://github.com/localtunnel/localtunnel) to create a public URL that your bot can use.
 
 ```bash
@@ -116,14 +116,14 @@ Discord requires a public endpoint where it can send and receive messages. You c
 npx localtunnel --port 3001 # Set it to whatever your app port is on. 
 ```
 
-## Run app
+## 🚀 Run app
 
 ```bash
 npm start
 ```
 
 
-### Environment variables
+### ⚙️ Environment variables
 
 Environment variables can be controlled by setting them in your `.env` file or by setting them in your deployment environment.
 
