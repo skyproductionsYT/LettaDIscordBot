@@ -118,6 +118,9 @@ cp .env.template .env
 
 <img width="1426" alt="image" src="https://github.com/user-attachments/assets/f3ba4098-c976-427c-8b3d-1811d93d2b71" />
 
+4️⃣ Enable the Privileged Gateway Intents
+
+<img width="1667" alt="image" src="https://github.com/user-attachments/assets/68978702-42d0-4630-9b83-56e3a7ce6e14" />
 
 
 ## 🌐 Set up interactivity
