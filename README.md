@@ -27,7 +27,7 @@ Deploy your own AI chatbot built on [Letta](https://www.letta.com/) with AI agen
 > You must have a Letta server running to use this app. Follow this [quickstart guide](https://docs.letta.com/quickstart) to run your local Letta server.
 
 > [!NOTE]
-> You must also have a Discord bot to use this app. Follow these [instructions](#-create-your-discord-app-and-set-your-variables) to create your Discord bot.
+> You must also have a Discord app to use this app. Follow these [instructions](#-create-your-discord-app-and-set-your-variables) to create your Discord app.
 
 ## ✨ Features
 
