@@ -102,10 +102,18 @@ cp .env.template .env
 ## 👾 Create your Discord app and set your variables
 
 1️⃣ Create a new Discord application [here](https://discord.com/developers/applications).
+<img width="475" alt="image" src="https://github.com/user-attachments/assets/b57ec05b-5381-43f4-afc4-824a84abdd55" />
+
 
 2️⃣ Under `Settings` -> `General Information` of your Discord app, copy your Discord application's `Application ID` and `Public Key`, and paste them in your `.env` file.
 
+<img width="1100" alt="image" src="https://github.com/user-attachments/assets/da7ff102-386e-402d-9c7f-73341beeba46" />
+
+
 3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
+
+<img width="1426" alt="image" src="https://github.com/user-attachments/assets/f3ba4098-c976-427c-8b3d-1811d93d2b71" />
+
 
 
 ## 🌐 Set up interactivity
