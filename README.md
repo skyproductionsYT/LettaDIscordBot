@@ -108,7 +108,7 @@ cp .env.template .env
 
 2️⃣ Under `Settings` -> `General Information` of your Discord app, copy your Discord application's `Application ID` and `Public Key`, and paste them in your `.env` file.
 
-<img width="1426" alt="image" src="https://github.com/user-attachments/assets/6118c327-37e8-43d4-ad6a-e5d073935230" />
+<img width="969" alt="image" src="https://github.com/user-attachments/assets/b05ca8c6-d51b-4258-97f2-ed7e7dcd3acf" />
 
 
 3️⃣ Under `Settings` -> `Bot` of your Discord app, copy your Discord bot's `Token`, and paste it in your `.env` file.
