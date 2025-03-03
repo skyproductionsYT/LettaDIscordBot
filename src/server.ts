@@ -31,7 +31,7 @@ client.on('messageCreate', async (message) => {
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
     setTimeout(async () => {
-      const msg = await sendMessage(message.content);
+      const msg = await sendMessage(message.author.username, message.author.id, message.content);
       await message.reply(msg);
     }, 1000);
     return;
@@ -42,7 +42,7 @@ client.on('messageCreate', async (message) => {
     console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
     setTimeout(async () => {
-      const msg = await sendMessage(message.content);
+      const msg = await sendMessage(message.author.username, message.author.id, message.content);
       await message.reply(msg);
     }, 1000);
     return;
