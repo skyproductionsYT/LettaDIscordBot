@@ -5,12 +5,14 @@
     <img alt="Letta logo" src="https://raw.githubusercontent.com/letta-ai/letta/refs/heads/main/assets/Letta-logo-RGB_GreyonOffBlack_cropped_small.png" width="500">
   </picture>
 </p>
+<a href="https://docs.letta.com/">
+  <img alt="Stateful AI agent Discord chatbot template built with Letta" src="/assets/discord_chatbot_header_2x.png">
+  <h1 align="center">Letta Discord Bot Example</h1>
+</a>
 
-<div align="center">
-  <h1>Letta Discord Bot Example</h1>
-</div>
-
-Deploy your own Discord AI chatbot built on [Letta](https://www.letta.com/), with an agent that can live forever and learn from experience.
+<p align="center">
+  Deploy your own AI chatbot using <a href="https://docs.letta.com/">Letta</a> to create agents that can learn over time.
+</p>
 
 <div align="center">
 |
