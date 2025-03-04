@@ -19,7 +19,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
-    return ERROR_MESSAGE;
+    return `Beep boop. My configuration is not set up properly. Please message me after I get fixed 👾`;
   }
 
   // We include a sender receipt so that agent knows which user sent the message
@@ -48,12 +48,12 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
         agentMessageResponse += chunk.content;
       }
     }
-    return agentMessageResponse;
   } catch (error) {
-    console.error('Error:', error);
-    return ERROR_MESSAGE;
+    console.error(error)
+    return 'Beep boop. An error occurred while communicating with the Letta server. Please message me again later 👾'
   }
-
+  
+  return agentMessageResponse;
 }
 
 export { sendMessage, MessageType };

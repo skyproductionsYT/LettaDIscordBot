@@ -1,7 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
+<<<<<<< HEAD
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { sendMessage, MessageType } from './messages';
+=======
+import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
+import { sendMessage } from './messages';
+>>>>>>> origin/fix/app-crashes-when-letta-server-dies
 
 
 const app = express();
@@ -11,6 +16,7 @@ const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
 const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var,
+<<<<<<< HEAD
 const TIMEOUT = 1000;
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;  // how many chars to include
 
@@ -20,6 +26,8 @@ function truncateMessage(message: string, maxLength: number): string {
     }
     return message;
 }
+=======
+>>>>>>> origin/fix/app-crashes-when-letta-server-dies
 
 const client = new Client({
   intents: [
@@ -36,6 +44,20 @@ client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
+// Helper function to send a message and receive a response
+async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>) {
+  try {
+    const [_, msg] = await Promise.all([
+      message.channel.sendTyping(),
+      sendMessage(message.author.username, message.author.id, message.content)
+    ]);
+
+    await message.reply(msg);
+  } catch (error) {
+    console.error("🛑 Error processing and sending message:", error);
+  }
+}
+
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
 
@@ -51,17 +73,17 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-
   if (message.author.bot && !RESPOND_TO_BOTS) {
     // Ignore other bots
-      console.log(`📩 Ignoring other bot...`);
-    return; 
+    console.log(`📩 Ignoring other bot...`);
+    return;
   }
 
   // 📨 Handle Direct Messages (DMs)
   if (message.guild === null) { // If no guild, it's a DM
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
     if (RESPOND_TO_DMS) {
+<<<<<<< HEAD
       await message.channel.sendTyping();
       setTimeout(async () => {
         // TODO change to a message type instead of bool
@@ -70,11 +92,15 @@ client.on('messageCreate', async (message) => {
           await message.reply(msg);
         }
       }, TIMEOUT);
+=======
+      processAndSendMessage(message);
+>>>>>>> origin/fix/app-crashes-when-letta-server-dies
     } else {
       console.log(`📩 Ignoring DM...`);
     }
     return;
   }
+<<<<<<< HEAD
 // Check if the bot is mentioned or if the message is a reply
 if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
     console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
@@ -98,12 +124,20 @@ if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.r
             }
         }
     }, TIMEOUT);
+=======
+
+  // Check if the bot is mentioned
+  if (RESPOND_TO_MENTIONS && message.mentions.has(client.user || '')) {
+    console.log(`📩 Received mention message from ${message.author.username}: ${message.content}`);
+    processAndSendMessage(message);
+>>>>>>> origin/fix/app-crashes-when-letta-server-dies
     return;
 }
 
   // Catch-all, generic non-mention message
   if (RESPOND_TO_GENERIC) {
     console.log(`📩 Received (non-mention) message from ${message.author.username}: ${message.content}`);
+<<<<<<< HEAD
     await message.channel.sendTyping();
     setTimeout(async () => {
       const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.GENERIC);
@@ -111,9 +145,11 @@ if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.r
         await message.reply(msg);
       }
     }, TIMEOUT);
+=======
+    processAndSendMessage(message);
+>>>>>>> origin/fix/app-crashes-when-letta-server-dies
     return;
   }
-
 });
 
 
