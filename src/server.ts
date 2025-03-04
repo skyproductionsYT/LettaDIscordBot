@@ -30,8 +30,16 @@ client.once('ready', () => {
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
 
+  if (message.author.id === client.user?.id) {
+    // Ignore messages from the bot itself
+    console.log(`📩 Ignoring message from myself...`);
+    return;
+  }
+
+
   if (message.author.bot && !RESPOND_TO_BOTS) {
     // Ignore other bots
+      console.log(`📩 Ignoring other bot...`);
     return; 
   }
 
