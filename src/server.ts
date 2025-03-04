@@ -10,6 +10,7 @@ const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === 'true';
 const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
 const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var,
 const TIMEOUT = 1000;
 
 const client = new Client({
@@ -29,6 +30,12 @@ client.once('ready', () => {
 
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
+
+  if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) {
+    // Ignore messages from other channels
+    console.log(`📩 Ignoring message from other channels (only listening on channel=${CHANNEL_ID})...`);
+    return;
+  }
 
   if (message.author.id === client.user?.id) {
     // Ignore messages from the bot itself
