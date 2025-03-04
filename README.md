@@ -16,6 +16,11 @@
 |
 </div>
 
+<div align="center">
+<h3>One-click deploy with Railway</h3>
+<a href="https://railway.com/template/C__ceE?referralCode=kdR8zc"><img src="https://railway.com/button.svg" alt="Deploy on Railway"/></a></div>
+</div>
+
 ### 
 
 > [!NOTE]
