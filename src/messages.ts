@@ -1,6 +1,7 @@
 import { LettaClient } from "@letta-ai/letta-client";
 
-const client = new LettaClient({ token: process.env.LETTA_TOKEN, baseUrl: process.env.LETTA_BASE_URL });
+// If the token is not set, just use a dummy value
+const client = new LettaClient({ token: process.env.LETTA_TOKEN || 'dummy', baseUrl: process.env.LETTA_BASE_URL });
 const AGENT_ID = process.env.LETTA_AGENT_ID;
 const USE_SENDER_PREFIX = process.env.LETTA_USE_SENDER_PREFIX === 'true';
 
