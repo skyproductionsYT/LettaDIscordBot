@@ -4,6 +4,7 @@ import { LettaClient } from "@letta-ai/letta-client";
 const client = new LettaClient({ token: process.env.LETTA_TOKEN || 'dummy', baseUrl: process.env.LETTA_BASE_URL });
 const AGENT_ID = process.env.LETTA_AGENT_ID;
 const USE_SENDER_PREFIX = process.env.LETTA_USE_SENDER_PREFIX === 'true';
+const ERROR_MESSAGE = "Hey there! Something has happened to me. Please message me again later 👾";
 
 enum MessageType {
   DM = "DM",
@@ -18,7 +19,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
-    return `Hey there! Something has happened to me. Please message me again later 👾`;
+    return ERROR_MESSAGE;
   }
 
   // We include a sender receipt so that agent knows which user sent the message
@@ -38,15 +39,21 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
       : message
   }
 
-  const response = await client.agents.messages.createStream(AGENT_ID, {
-    messages: [message_dict]
-  });
-  for await (const chunk of response) {
-    if ('content' in chunk && typeof chunk.content === 'string') {
-      agentMessageResponse += chunk.content;
+  try {
+    const response = await client.agents.messages.createStream(AGENT_ID, {
+      messages: [message_dict]
+    });
+    for await (const chunk of response) {
+      if ('content' in chunk && typeof chunk.content === 'string') {
+        agentMessageResponse += chunk.content;
+      }
     }
+    return agentMessageResponse;
+  } catch (error) {
+    console.error('Error:', error);
+    return ERROR_MESSAGE;
   }
-  return agentMessageResponse;
+
 }
 
 export { sendMessage, MessageType };
