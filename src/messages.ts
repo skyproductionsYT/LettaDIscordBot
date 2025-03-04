@@ -30,7 +30,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
   // If it's false, then we put the receipt in the name field (the backend must handle it)
   const message_dict = {
     role: "user" as const,
-    name: USE_SENDER_PREFIX ? sender_name_receipt : undefined,
+    name: USE_SENDER_PREFIX ? undefined : sender_name_receipt,
     content: USE_SENDER_PREFIX ? 
       (message_type === MessageType.MENTION ? `[${sender_name_receipt} sent a message mentioning you] ${message}` : 
       message_type === MessageType.REPLY ? `[${sender_name_receipt} replied to you] ${message}` : 
