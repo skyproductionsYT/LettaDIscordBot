@@ -66,7 +66,9 @@ client.on('messageCreate', async (message) => {
       setTimeout(async () => {
         // TODO change to a message type instead of bool
         const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.DM);  
-        await message.reply(msg);
+        if (msg !== "") {
+          await message.reply(msg);
+        }
       }, TIMEOUT);
     } else {
       console.log(`📩 Ignoring DM...`);
@@ -86,10 +88,14 @@ if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.r
             const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
             msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
             const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.REPLY);
-            await message.reply(msg);
+            if (msg !== "") {
+              await message.reply(msg);
+            }
         } else {
             const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.MENTION);
-            await message.reply(msg);
+            if (msg !== "") {
+              await message.reply(msg);
+            }
         }
     }, TIMEOUT);
     return;
@@ -101,7 +107,9 @@ if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.r
     await message.channel.sendTyping();
     setTimeout(async () => {
       const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.GENERIC);
-      await message.reply(msg);
+      if (msg !== "") {
+        await message.reply(msg);
+      }
     }, TIMEOUT);
     return;
   }
