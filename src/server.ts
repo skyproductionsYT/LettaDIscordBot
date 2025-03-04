@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
 import { sendMessage } from './messages';
 
 
@@ -28,6 +28,17 @@ client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
+// Helper function to send a message and receive a response
+async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>) {
+  await message.channel.sendTyping();
+  setTimeout(async () => {
+    const msg = await sendMessage(message.author.username, message.author.id, message.content);
+    if (msg) {
+      await message.reply(msg);
+    }
+  }, TIMEOUT);
+}
+
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
 
@@ -43,22 +54,17 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-
   if (message.author.bot && !RESPOND_TO_BOTS) {
     // Ignore other bots
-      console.log(`📩 Ignoring other bot...`);
-    return; 
+    console.log(`📩 Ignoring other bot...`);
+    return;
   }
 
   // 📨 Handle Direct Messages (DMs)
   if (message.guild === null) { // If no guild, it's a DM
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
     if (RESPOND_TO_DMS) {
-      await message.channel.sendTyping();
-      setTimeout(async () => {
-        const msg = await sendMessage(message.author.username, message.author.id, message.content);
-        await message.reply(msg);
-      }, TIMEOUT);
+      processAndSendMessage(message);
     } else {
       console.log(`📩 Ignoring DM...`);
     }
@@ -68,25 +74,16 @@ client.on('messageCreate', async (message) => {
   // Check if the bot is mentioned
   if (RESPOND_TO_MENTIONS && message.mentions.has(client.user || '')) {
     console.log(`📩 Received mention message from ${message.author.username}: ${message.content}`);
-    await message.channel.sendTyping();
-    setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content);
-      await message.reply(msg);
-    }, TIMEOUT);
+    processAndSendMessage(message);
     return;
   }
 
   // Catch-all, generic non-mention message
   if (RESPOND_TO_GENERIC) {
     console.log(`📩 Received (non-mention) message from ${message.author.username}: ${message.content}`);
-    await message.channel.sendTyping();
-    setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content);
-      await message.reply(msg);
-    }, TIMEOUT);
+    processAndSendMessage(message);
     return;
   }
-
 });
 
 
