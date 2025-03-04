@@ -11,7 +11,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
-    return `Hey there! Something has happened to me. Please message me again later 👾`;
+    return `Beep boop. My configuration is not set up properly. Please message me after I get fixed 👾`;
   }
 
   // We include a sender receipt so that agent knows which user sent the message
@@ -22,18 +22,23 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
   // If it's false, then we put the receipt in the name field (the backend must handle it)
   const message_dict = {
     role: "user" as const,
-    name: USE_SENDER_PREFIX ? sender_name_receipt : undefined,
     content: USE_SENDER_PREFIX ? `[${sender_name_receipt} sent a message] ${message}` : message
   }
 
-  const response = await client.agents.messages.createStream(AGENT_ID, {
-    messages: [message_dict]
-  });
-  for await (const chunk of response) {
-    if ('content' in chunk && typeof chunk.content === 'string') {
-      agentMessageResponse += chunk.content;
+  try {
+    const response = await client.agents.messages.createStream(AGENT_ID, {
+      messages: [message_dict]
+    });
+    for await (const chunk of response) {
+      if ('content' in chunk && typeof chunk.content === 'string') {
+        agentMessageResponse += chunk.content;
+      }
     }
+  } catch (error) {
+    console.error(error)
+    return 'Beep boop. Something went wrong with my server. Please message me again later 👾'
   }
+  
   return agentMessageResponse;
 }
 
