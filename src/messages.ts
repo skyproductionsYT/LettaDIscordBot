@@ -36,7 +36,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
     }
   } catch (error) {
     console.error(error)
-    return 'Beep boop. Something went wrong with my server. Please message me again later 👾'
+    return 'Beep boop. An error occurred while communicating with the Letta server. Please message me again later 👾'
   }
   
   return agentMessageResponse;
