@@ -44,7 +44,9 @@ async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<
       sendMessage(message.author.username, message.author.id, message.content, messageType)
     ]);
 
-    await message.reply(msg);
+    if (msg !== "") {
+      await message.reply(msg);
+    }
   } catch (error) {
     console.error("🛑 Error processing and sending message:", error);
   }
@@ -82,12 +84,31 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-  // Check if the bot is mentioned
-  if (RESPOND_TO_MENTIONS && message.mentions.has(client.user || '')) {
-    console.log(`📩 Received mention message from ${message.author.username}: ${message.content}`);
-    processAndSendMessage(message, MessageType.MENTION);
+  // Check if the bot is mentioned or if the message is a reply
+  if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
+    console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
+    await message.channel.sendTyping();
+    
+    setTimeout(async () => {
+        let msgContent = message.content;
+
+        // If it's a reply, fetch the original message
+        if (message.reference && message.reference.messageId) {
+            const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
+            msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
+            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.REPLY);
+            if (msg !== "") {
+              await message.reply(msg);
+            }
+        } else {
+            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.MENTION);
+            if (msg !== "") {
+              await message.reply(msg);
+            }
+        }
+    }, TIMEOUT);
     return;
-}
+  }
 
   // Catch-all, generic non-mention message
   if (RESPOND_TO_GENERIC) {
