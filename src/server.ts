@@ -6,6 +6,8 @@ import { sendMessage } from './messages';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === 'true';
+const TIMEOUT = 1000;
 
 const client = new Client({
   intents: [
@@ -29,11 +31,15 @@ client.on('messageCreate', async (message) => {
   // 📨 Handle Direct Messages (DMs)
   if (message.guild === null) { // If no guild, it's a DM
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
-    await message.channel.sendTyping();
-    setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content);
-      await message.reply(msg);
-    }, 1000);
+    if (RESPOND_TO_DMS) {
+      await message.channel.sendTyping();
+      setTimeout(async () => {
+        const msg = await sendMessage(message.author.username, message.author.id, message.content);
+        await message.reply(msg);
+      }, TIMEOUT);
+    } else {
+      console.log(`📩 Ignoring DM...`);
+    }
     return;
   }
 
@@ -44,7 +50,7 @@ client.on('messageCreate', async (message) => {
     setTimeout(async () => {
       const msg = await sendMessage(message.author.username, message.author.id, message.content);
       await message.reply(msg);
-    }, 1000);
+    }, TIMEOUT);
     return;
   }
 });
