@@ -5,8 +5,15 @@ const client = new LettaClient({ token: process.env.LETTA_TOKEN || 'dummy', base
 const AGENT_ID = process.env.LETTA_AGENT_ID;
 const USE_SENDER_PREFIX = process.env.LETTA_USE_SENDER_PREFIX === 'true';
 
+enum MessageType {
+  DM = "DM",
+  MENTION = "MENTION",
+  REPLY = "REPLY",
+  GENERIC = "GENERIC"
+}
+
 // Send message and receive response
-async function sendMessage(sender_name: string, sender_id: string, message: string) {
+async function sendMessage(sender_name: string, sender_id: string, message: string, message_type: MessageType) {
   let agentMessageResponse = ''
 
   if (!AGENT_ID) {
@@ -23,7 +30,12 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
   const message_dict = {
     role: "user" as const,
     name: USE_SENDER_PREFIX ? sender_name_receipt : undefined,
-    content: USE_SENDER_PREFIX ? `[${sender_name_receipt} sent a message] ${message}` : message
+    content: USE_SENDER_PREFIX ? 
+      (message_type === MessageType.MENTION ? `[${sender_name_receipt} sent a message mentioning you] ${message}` : 
+      message_type === MessageType.REPLY ? `[${sender_name_receipt} replied to you] ${message}` : 
+      message_type === MessageType.DM ? `[${sender_name_receipt} sent you a direct message] ${message}` : 
+      `[${sender_name_receipt} sent a message to the channel] ${message}`) 
+      : message
   }
 
   const response = await client.agents.messages.createStream(AGENT_ID, {
@@ -37,4 +49,4 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
   return agentMessageResponse;
 }
 
-export { sendMessage };
+export { sendMessage, MessageType };

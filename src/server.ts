@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import { sendMessage } from './messages';
+import { sendMessage, MessageType } from './messages';
 
 
 const app = express();
@@ -12,6 +12,14 @@ const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var,
 const TIMEOUT = 1000;
+const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;  // how many chars to include
+
+function truncateMessage(message: string, maxLength: number): string {
+    if (message.length > maxLength) {
+        return message.substring(0, maxLength - 3) + '...'; // Truncate and add ellipsis
+    }
+    return message;
+}
 
 const client = new Client({
   intents: [
@@ -56,7 +64,8 @@ client.on('messageCreate', async (message) => {
     if (RESPOND_TO_DMS) {
       await message.channel.sendTyping();
       setTimeout(async () => {
-        const msg = await sendMessage(message.author.username, message.author.id, message.content);
+        // TODO change to a message type instead of bool
+        const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.DM);  
         await message.reply(msg);
       }, TIMEOUT);
     } else {
@@ -64,24 +73,34 @@ client.on('messageCreate', async (message) => {
     }
     return;
   }
-
-  // Check if the bot is mentioned
-  if (RESPOND_TO_MENTIONS && message.mentions.has(client.user || '')) {
-    console.log(`📩 Received mention message from ${message.author.username}: ${message.content}`);
+// Check if the bot is mentioned or if the message is a reply
+if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
+    console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
+    
     setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content);
-      await message.reply(msg);
+        let msgContent = message.content;
+
+        // If it's a reply, fetch the original message
+        if (message.reference && message.reference.messageId) {
+            const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
+            msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
+            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.REPLY);
+            await message.reply(msg);
+        } else {
+            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.MENTION);
+            await message.reply(msg);
+        }
     }, TIMEOUT);
     return;
-  }
+}
 
   // Catch-all, generic non-mention message
   if (RESPOND_TO_GENERIC) {
     console.log(`📩 Received (non-mention) message from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
     setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content);
+      const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.GENERIC);
       await message.reply(msg);
     }, TIMEOUT);
     return;
