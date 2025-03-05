@@ -73,6 +73,12 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
+  // Ignore messages that start with !
+  if (message.content.startsWith('!')) {
+    console.log(`📩 Ignoring message that starts with !...`);
+    return;
+  }
+
   // 📨 Handle Direct Messages (DMs)
   if (message.guild === null) { // If no guild, it's a DM
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
