@@ -137,35 +137,51 @@ cp .env.template .env
 
 <img width="2130" alt="image" src="https://github.com/user-attachments/assets/c6e22db7-7bde-4d34-ab67-074ee5c048b0" />
 
-
-
-## 🌐 Set up interactivity
-Discord requires a public endpoint where it can send and receive messages. You can use [LocalTunnel](https://github.com/localtunnel/localtunnel) to create a public URL that your bot can use.
-
-```bash
-# Create a tunnel
-npx localtunnel --port 3001 # Set it to whatever your app port is on. 
-```
-
-## 🚀 Run app
-
-```bash
-npm start
-```
-
-
 ### ⚙️ Environment variables
 
 Environment variables can be controlled by setting them in your `.env` file or by setting them in your deployment environment.
 
 The following environment variables can be set in the `.env` file:
 
-* `LETTA_TOKEN`: Your personal access token for the Letta API.
+* `LETTA_TOKEN`: The password of your Letta server (if you self-deployed a server). Not applicable if you are not using a password (see [docs](https://docs.letta.com/guides/server/docker#password-protection-advanced)).
 * `LETTA_BASE_URL`: The base URL of your Letta server. This is usually `http://localhost:8283`.
 * `LETTA_AGENT_ID`: The ID of the Letta agent to use for the bot.
 
 * `APP_ID`: The ID of your Discord application.
 * `DISCORD_TOKEN`: The bot token for your Discord bot.
 * `PUBLIC_KEY`: The public key for your Discord bot.
+* `DISCORD_CHANNEL_ID`: Set this if you want the bot to only respond to messages (listen) in a specific channel.
 
 * `PORT`: The port to run the app on. Default is `3001`.
+
+For more settings (including options to enable/disable DM interactions, reply to non-directed messages, etc.), view the [`.env.template`](/.env.template) file provided.
+
+### 👾 Create your Letta agent
+
+You can connect an existing agent to Discord (by using its `LETTA_AGENT_ID`), or you can create a brand new agent specifically to use as a Discord bot.
+
+If you create a new agent, we'd recommend adding some information (e.g. inside of the `human` or `persona` memory block) that explains how to interact with Discord. For example, placing the following text in `human`:
+```
+I can use this space in my core memory to take notes on the users that I am interacting with.
+So far, all I know that is that I am connected to a Discord server.
+I can see messages that other users send on this server, as long as they are directed at me (with a mention or a reply).
+I should also remember that if I want to "at" a user, I need to use the <@discord-id> format in my message response.
+This will render the user tag in a dynamic way on Discord, vs any other reference to a user (eg their username) will just result in plaintext.
+```
+
+Additionally, if you would like to give your chatbot/agent the ability to "ignore" (not reply) to certain messages, you can add a custom tool like this to your agent (for information on how to add a custom tool, see [our docs](https://docs.letta.com/guides/agents/tools#custom-tools)):
+```python
+def ignore():
+    """
+    Not every message warrants a reply (especially if the message isn't directed at you). Call this tool to ignore the message.
+    """
+    return
+```
+
+The ability for an agent to "ignore" messages can be crucial if you connect your agent to an active Discord channel with many participants, especially if you set `RESPOND_TO_GENERIC` to `true` (in which case the agent will "see" every single message in a channel, even messages not directed at the agent itself).
+
+## 🚀 Run app
+
+```bash
+npm start
+```
