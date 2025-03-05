@@ -40,6 +40,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
   }
 
   try {
+    console.log(`🛜 Sending message to Letta server (agent=${AGENT_ID}): ${JSON.stringify(message_dict)}`)
     const response = await client.agents.messages.createStream(AGENT_ID, {
       messages: [message_dict]
     });
