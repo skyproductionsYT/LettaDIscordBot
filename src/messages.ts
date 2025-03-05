@@ -29,7 +29,7 @@ const processStream = async (response: Stream<LettaStreamingResponse>) => {
 
 // Send message and receive response
 async function sendMessage(discordMessageObject: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
-  const { author: { username: sender_name, id: sender_id }, content: message } = discordMessageObject;
+  const { author: { username: senderName, id: senderId }, content: message } = discordMessageObject;
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
@@ -38,7 +38,7 @@ async function sendMessage(discordMessageObject: OmitPartialGroupDMChannel<Messa
 
   // We include a sender receipt so that agent knows which user sent the message
   // We also include the Discord ID so that the agent can tag the user with @
-  const sender_name_receipt = `${sender_name} (id=${sender_id})`;
+  const sender_name_receipt = `${senderName} (id=${senderId})`;
   
   // If LETTA_USE_SENDER_PREFIX, then we put the receipt in the front of the message
   // If it's false, then we put the receipt in the name field (the backend must handle it)
