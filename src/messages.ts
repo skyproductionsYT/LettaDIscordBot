@@ -4,7 +4,7 @@ import { LettaClient } from "@letta-ai/letta-client";
 const client = new LettaClient({ token: process.env.LETTA_TOKEN || 'dummy', baseUrl: process.env.LETTA_BASE_URL });
 const AGENT_ID = process.env.LETTA_AGENT_ID;
 const USE_SENDER_PREFIX = process.env.LETTA_USE_SENDER_PREFIX === 'true';
-const ERROR_MESSAGE = "Hey there! Something has happened to me. Please message me again later 👾";
+const SURFACE_ERRORS = process.env.SURFACE_ERRORS === 'true';
 
 enum MessageType {
   DM = "DM",
@@ -19,7 +19,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
-    return `Beep boop. My configuration is not set up properly. Please message me after I get fixed 👾`;
+    return SURFACE_ERRORS ? `Beep boop. My configuration is not set up properly. Please message me after I get fixed 👾` : "";
   }
 
   // We include a sender receipt so that agent knows which user sent the message
@@ -50,7 +50,7 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
     }
   } catch (error) {
     console.error(error)
-    return 'Beep boop. An error occurred while communicating with the Letta server. Please message me again later 👾'
+    return SURFACE_ERRORS ? 'Beep boop. An error occurred while communicating with the Letta server. Please message me again later 👾' : "";
   }
   
   return agentMessageResponse;
