@@ -1,4 +1,7 @@
 import { LettaClient } from "@letta-ai/letta-client";
+import { LettaStreamingResponse } from "@letta-ai/letta-client/api/resources/agents/resources/messages/types/LettaStreamingResponse";
+import { Stream } from "@letta-ai/letta-client/core";
+import { Message, OmitPartialGroupDMChannel } from "discord.js";
 
 // If the token is not set, just use a dummy value
 const client = new LettaClient({ token: process.env.LETTA_TOKEN || 'dummy', baseUrl: process.env.LETTA_BASE_URL });
@@ -13,9 +16,20 @@ enum MessageType {
   GENERIC = "GENERIC"
 }
 
+// Helper function to process stream
+const processStream = async (response: Stream<LettaStreamingResponse>) => {
+  let agentMessageResponse = '';
+  for await (const chunk of response) {
+    if ('content' in chunk && typeof chunk.content === 'string') {
+      agentMessageResponse += chunk.content;
+    }
+  }
+  return agentMessageResponse;
+}
+
 // Send message and receive response
-async function sendMessage(sender_name: string, sender_id: string, message: string, message_type: MessageType) {
-  let agentMessageResponse = ''
+async function sendMessage(discordMessageObject: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
+  const { author: { username: sender_name, id: sender_id }, content: message } = discordMessageObject;
 
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
@@ -32,9 +46,9 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
     role: "user" as const,
     name: USE_SENDER_PREFIX ? undefined : sender_name_receipt,
     content: USE_SENDER_PREFIX ? 
-      (message_type === MessageType.MENTION ? `[${sender_name_receipt} sent a message mentioning you] ${message}` : 
-      message_type === MessageType.REPLY ? `[${sender_name_receipt} replied to you] ${message}` : 
-      message_type === MessageType.DM ? `[${sender_name_receipt} sent you a direct message] ${message}` : 
+      (messageType === MessageType.MENTION ? `[${sender_name_receipt} sent a message mentioning you] ${message}` : 
+        messageType === MessageType.REPLY ? `[${sender_name_receipt} replied to you] ${message}` : 
+        messageType === MessageType.DM ? `[${sender_name_receipt} sent you a direct message] ${message}` : 
       `[${sender_name_receipt} sent a message to the channel] ${message}`) 
       : message
   }
@@ -44,17 +58,21 @@ async function sendMessage(sender_name: string, sender_id: string, message: stri
     const response = await client.agents.messages.createStream(AGENT_ID, {
       messages: [message_dict]
     });
-    for await (const chunk of response) {
-      if ('content' in chunk && typeof chunk.content === 'string') {
-        agentMessageResponse += chunk.content;
-      }
+
+    if (response) { // show typing indicator and process message if there is a stream
+      const [_, agentMessageResponse] = await Promise.all([
+        discordMessageObject.channel.sendTyping(),
+        await processStream(response)
+      ]);
+  
+      return agentMessageResponse || ""
     }
+
+    return ""
   } catch (error) {
     console.error(error)
     return SURFACE_ERRORS ? 'Beep boop. An error occurred while communicating with the Letta server. Please message me again later 👾' : "";
   }
-  
-  return agentMessageResponse;
 }
 
 export { sendMessage, MessageType };
