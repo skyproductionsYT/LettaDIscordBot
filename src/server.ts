@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
 import { sendMessage, MessageType } from './messages';
 
 
@@ -36,6 +36,22 @@ client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
+// Helper function to send a message and receive a response
+async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
+  try {
+    const [_, msg] = await Promise.all([
+      message.channel.sendTyping(),
+      sendMessage(message.author.username, message.author.id, message.content, messageType)
+    ]);
+
+    if (msg !== "") {
+      await message.reply(msg);
+    }
+  } catch (error) {
+    console.error("🛑 Error processing and sending message:", error);
+  }
+}
+
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
 
@@ -51,32 +67,25 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-
   if (message.author.bot && !RESPOND_TO_BOTS) {
     // Ignore other bots
-      console.log(`📩 Ignoring other bot...`);
-    return; 
+    console.log(`📩 Ignoring other bot...`);
+    return;
   }
 
   // 📨 Handle Direct Messages (DMs)
   if (message.guild === null) { // If no guild, it's a DM
     console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
     if (RESPOND_TO_DMS) {
-      await message.channel.sendTyping();
-      setTimeout(async () => {
-        // TODO change to a message type instead of bool
-        const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.DM);  
-        if (msg !== "") {
-          await message.reply(msg);
-        }
-      }, TIMEOUT);
+      processAndSendMessage(message, MessageType.DM);
     } else {
       console.log(`📩 Ignoring DM...`);
     }
     return;
   }
-// Check if the bot is mentioned or if the message is a reply
-if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
+
+  // Check if the bot is mentioned or if the message is a reply
+  if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
     console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
     
@@ -99,21 +108,14 @@ if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.r
         }
     }, TIMEOUT);
     return;
-}
+  }
 
   // Catch-all, generic non-mention message
   if (RESPOND_TO_GENERIC) {
     console.log(`📩 Received (non-mention) message from ${message.author.username}: ${message.content}`);
-    await message.channel.sendTyping();
-    setTimeout(async () => {
-      const msg = await sendMessage(message.author.username, message.author.id, message.content, MessageType.GENERIC);
-      if (msg !== "") {
-        await message.reply(msg);
-      }
-    }, TIMEOUT);
+    processAndSendMessage(message, MessageType.GENERIC);
     return;
   }
-
 });
 
 
