@@ -38,25 +38,25 @@ async function sendMessage(discordMessageObject: OmitPartialGroupDMChannel<Messa
 
   // We include a sender receipt so that agent knows which user sent the message
   // We also include the Discord ID so that the agent can tag the user with @
-  const sender_name_receipt = `${senderName} (id=${senderId})`;
+  const senderNameReceipt = `${senderName} (id=${senderId})`;
   
   // If LETTA_USE_SENDER_PREFIX, then we put the receipt in the front of the message
   // If it's false, then we put the receipt in the name field (the backend must handle it)
-  const message_dict = {
+  const lettaMessage = {
     role: "user" as const,
-    name: USE_SENDER_PREFIX ? undefined : sender_name_receipt,
+    name: USE_SENDER_PREFIX ? undefined : senderNameReceipt,
     content: USE_SENDER_PREFIX ? 
-      (messageType === MessageType.MENTION ? `[${sender_name_receipt} sent a message mentioning you] ${message}` : 
-        messageType === MessageType.REPLY ? `[${sender_name_receipt} replied to you] ${message}` : 
-        messageType === MessageType.DM ? `[${sender_name_receipt} sent you a direct message] ${message}` : 
-      `[${sender_name_receipt} sent a message to the channel] ${message}`) 
+      (messageType === MessageType.MENTION ? `[${senderNameReceipt} sent a message mentioning you] ${message}` : 
+        messageType === MessageType.REPLY ? `[${senderNameReceipt} replied to you] ${message}` : 
+        messageType === MessageType.DM ? `[${senderNameReceipt} sent you a direct message] ${message}` : 
+      `[${senderNameReceipt} sent a message to the channel] ${message}`) 
       : message
   }
 
   try {
-    console.log(`🛜 Sending message to Letta server (agent=${AGENT_ID}): ${JSON.stringify(message_dict)}`)
+    console.log(`🛜 Sending message to Letta server (agent=${AGENT_ID}): ${JSON.stringify(lettaMessage)}`)
     const response = await client.agents.messages.createStream(AGENT_ID, {
-      messages: [message_dict]
+      messages: [lettaMessage]
     });
 
     if (response) { // show typing indicator and process message if there is a stream
