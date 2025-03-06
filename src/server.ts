@@ -11,7 +11,6 @@ const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
 const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var,
-const TIMEOUT = 1000;
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;  // how many chars to include
 
 function truncateMessage(message: string, maxLength: number): string {
@@ -39,11 +38,7 @@ client.once('ready', () => {
 // Helper function to send a message and receive a response
 async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
   try {
-    const [_, msg] = await Promise.all([
-      message.channel.sendTyping(),
-      sendMessage(message.author.username, message.author.id, message.content, messageType)
-    ]);
-
+    const msg = await sendMessage(message, messageType)
     if (msg !== "") {
       await message.reply(msg);
     }
@@ -54,7 +49,6 @@ async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<
 
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
-
   if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) {
     // Ignore messages from other channels
     console.log(`📩 Ignoring message from other channels (only listening on channel=${CHANNEL_ID})...`);
@@ -95,24 +89,22 @@ client.on('messageCreate', async (message) => {
     console.log(`📩 Received message from ${message.author.username}: ${message.content}`);
     await message.channel.sendTyping();
     
-    setTimeout(async () => {
-        let msgContent = message.content;
+    let msgContent = message.content;
 
-        // If it's a reply, fetch the original message
-        if (message.reference && message.reference.messageId) {
-            const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
-            msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
-            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.REPLY);
-            if (msg !== "") {
-              await message.reply(msg);
-            }
-        } else {
-            const msg = await sendMessage(message.author.username, message.author.id, msgContent, MessageType.MENTION);
-            if (msg !== "") {
-              await message.reply(msg);
-            }
+    // If it's a reply, fetch the original message
+    if (message.reference && message.reference.messageId) {
+        const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
+        msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
+        const msg = await sendMessage(message, MessageType.REPLY);
+        if (msg !== "") {
+          await message.reply(msg);
         }
-    }, TIMEOUT);
+    } else {
+        const msg = await sendMessage(message, MessageType.MENTION);
+        if (msg !== "") {
+          await message.reply(msg);
+        }
+    }
     return;
   }
 
