@@ -181,5 +181,5 @@ client.on('messageCreate', async (message) => {
 app.listen(PORT, () => {
   console.log('Listening on port', PORT);
   client.login(process.env.DISCORD_TOKEN);
-  startRandomEventTimer(); // Replace with actual agent ID
+  startRandomEventTimer();
 });
