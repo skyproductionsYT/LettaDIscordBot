@@ -51,41 +51,62 @@ async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<
   }
 }
 
-// Function to start a randomized event timer
+
+// Function to start a randomized event timer with improved timing
 async function startRandomEventTimer() {
   if (!ENABLE_TIMER) {
       console.log("Timer feature is disabled.");
       return;
   }
 
-  const randomMinutes = Math.floor(Math.random() * TIMER_INTERVAL_MINUTES);
+  // Set a minimum delay to prevent too-frequent firing (at least 1 minute)
+  const minMinutes = 1;
+  // Generate random minutes between minMinutes and TIMER_INTERVAL_MINUTES
+  const randomMinutes = minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
+  
+  // Log the next timer interval for debugging
+  console.log(`⏰ Timer scheduled to fire in ${randomMinutes} minutes`);
+  
   const delay = randomMinutes * 60 * 1000; // Convert minutes to milliseconds
 
   setTimeout(async () => {
+      console.log(`⏰ Timer fired after ${randomMinutes} minutes`);
+      
       // Determine if the event should fire based on the probability
       if (Math.random() < FIRING_PROBABILITY) {
+          console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
 
-          // Generate the response via the Letta API
+          // Generate the response via the API
           const msg = await sendTimerMessage();
 
           // Pass that response to Discord
           if (msg !== "") {
             if (CHANNEL_ID) {
-                const channel = await client.channels.fetch(CHANNEL_ID);
-                if (channel && channel.isTextBased() && 'send' in channel) {
-                    await channel.send(msg);
-                } else {
-                    console.log("Channel not found or is not a text channel.");
+                try {
+                    const channel = await client.channels.fetch(CHANNEL_ID);
+                    if (channel && 'send' in channel) {
+                        await channel.send(msg);
+                        console.log("⏰ Timer message sent to channel");
+                    } else {
+                        console.log("⏰ Channel not found or is not a text channel.");
+                    }
+                } catch (error) {
+                    console.error("⏰ Error sending timer message:", error);
                 }
             } else {
-                console.log("No CHANNEL_ID defined; message not sent.");
+                console.log("⏰ No CHANNEL_ID defined; message not sent.");
             }
           }
+      } else {
+          console.log(`⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`);
       }
-      startRandomEventTimer(); // Restart the timer
+      
+      // Schedule the next timer with a small delay to prevent immediate restarts
+      setTimeout(() => {
+          startRandomEventTimer(); 
+      }, 1000); // 1 second delay before scheduling next timer
   }, delay);
 }
-
 
 // Handle messages mentioning the bot
 client.on('messageCreate', async (message) => {
