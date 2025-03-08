@@ -97,7 +97,7 @@ By default, the Letta server will run on `http://localhost:8283`.
 
 ```bash
 # Clone the repository
-git clone git@github.com:letta-ai/letta-discord-bot-example.git
+git clone https://github.com/letta-ai/letta-discord-bot-example.git
 
 # Navigate to the project directory
 cd letta-discord-bot-example
