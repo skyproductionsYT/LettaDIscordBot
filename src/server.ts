@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
-import { sendMessage, MessageType } from './messages';
+import { sendMessage, sendTimerMessage, MessageType } from './messages';
 
 
 const app = express();
@@ -12,6 +12,9 @@ const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var,
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;  // how many chars to include
+const ENABLE_TIMER = process.env.ENABLE_TIMER === 'true';
+const TIMER_INTERVAL_MINUTES = parseInt(process.env.TIMER_INTERVAL_MINUTES || '15', 10);
+const FIRING_PROBABILITY = parseFloat(process.env.FIRING_PROBABILITY || '0.1');
 
 function truncateMessage(message: string, maxLength: number): string {
     if (message.length > maxLength) {
@@ -41,10 +44,68 @@ async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<
     const msg = await sendMessage(message, messageType)
     if (msg !== "") {
       await message.reply(msg);
+      console.log(`Message sent: ${msg}`);
     }
   } catch (error) {
     console.error("🛑 Error processing and sending message:", error);
   }
+}
+
+
+// Function to start a randomized event timer with improved timing
+async function startRandomEventTimer() {
+  if (!ENABLE_TIMER) {
+      console.log("Timer feature is disabled.");
+      return;
+  }
+
+  // Set a minimum delay to prevent too-frequent firing (at least 1 minute)
+  const minMinutes = 1;
+  // Generate random minutes between minMinutes and TIMER_INTERVAL_MINUTES
+  const randomMinutes = minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
+  
+  // Log the next timer interval for debugging
+  console.log(`⏰ Timer scheduled to fire in ${randomMinutes} minutes`);
+  
+  const delay = randomMinutes * 60 * 1000; // Convert minutes to milliseconds
+
+  setTimeout(async () => {
+      console.log(`⏰ Timer fired after ${randomMinutes} minutes`);
+      
+      // Determine if the event should fire based on the probability
+      if (Math.random() < FIRING_PROBABILITY) {
+          console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
+
+          // Generate the response via the API
+          const msg = await sendTimerMessage();
+
+          // Pass that response to Discord
+          if (msg !== "") {
+            if (CHANNEL_ID) {
+                try {
+                    const channel = await client.channels.fetch(CHANNEL_ID);
+                    if (channel && 'send' in channel) {
+                        await channel.send(msg);
+                        console.log("⏰ Timer message sent to channel");
+                    } else {
+                        console.log("⏰ Channel not found or is not a text channel.");
+                    }
+                } catch (error) {
+                    console.error("⏰ Error sending timer message:", error);
+                }
+            } else {
+                console.log("⏰ No CHANNEL_ID defined; message not sent.");
+            }
+          }
+      } else {
+          console.log(`⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`);
+      }
+      
+      // Schedule the next timer with a small delay to prevent immediate restarts
+      setTimeout(() => {
+          startRandomEventTimer(); 
+      }, 1000); // 1 second delay before scheduling next timer
+  }, delay);
 }
 
 // Handle messages mentioning the bot
@@ -116,9 +177,9 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-
 // Start the Discord bot
 app.listen(PORT, () => {
   console.log('Listening on port', PORT);
   client.login(process.env.DISCORD_TOKEN);
+  startRandomEventTimer();
 });
