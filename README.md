@@ -31,7 +31,7 @@
 
 ## 📺 Video overview (watch on YouTube)
 
-[![Video Title](https://img.youtube.com/vi/HDyCAV-xuMw/0.jpg)](https://www.youtube.com/watch?v=HDyCAV-xuMw)
+[![AI agents + Discord! Make a Discord chatbot with long-term memory using Letta](https://img.youtube.com/vi/HDyCAV-xuMw/0.jpg)](https://www.youtube.com/watch?v=HDyCAV-xuMw)
 
 ## ✨ Features
 
