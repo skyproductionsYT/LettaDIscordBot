@@ -186,6 +186,14 @@ The ability for an agent to "ignore" messages can be crucial if you connect your
 
 ## 🚀 Run app
 
+To run the app locally, simply do:
 ```bash
 npm start
 ```
+
+This will spin up the Discord bot service, which will listen for events on Discord, and when an event happens (e.g. a message is sent in a channel), it will send an appropriate message to the Letta server, check for a response from the Letta server, and potentially send back a reply message on Discord.
+
+We have also prepared a one-click deploy option to easily deploy this repo on Railway.
+Simply click the deploy link, enter your environment variables (including your Letta server address and Letta agent ID), and your Discord bot will be ready to go (and live 24/7):
+
+<a href="https://railway.com/template/C__ceE?referralCode=kdR8zc"><img src="https://railway.com/button.svg" alt="Deploy on Railway"/></a>
