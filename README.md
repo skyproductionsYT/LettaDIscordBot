@@ -154,9 +154,9 @@ The following environment variables can be set in the `.env` file:
 
 * `PORT`: The port to run the app on. Default is `3001`.
 
-* `ENABLE_TIMER`: Enable or disable the timer feature (will randomly trigger an agent input/event at a certain interval, defaults to true)
-* `TIMER_INTERVAL_MINUTES`: Maximum interval range in minutes for the random timer (defaults to every 15 minutes)
-* `FIRING_PROBABILITY`: Probability of the timer firing (0.0 to 1.0), defaults to 0.1 (10%)
+* `ENABLE_TIMER`: Enable or disable the timer feature (will randomly trigger an agent input/event at a certain interval, defaults to true). Note that the timer feature requires `DISCORD_CHANNEL_ID` to be set (so that the agent knows where to send a message to if the timer is fired).
+* `TIMER_INTERVAL_MINUTES`: Maximum interval range in minutes for the random timer (defaults to every 15 minutes).
+* `FIRING_PROBABILITY`: Probability of the timer firing (0.0 to 1.0), defaults to 0.1 (10%).
 
 For more settings (including options to enable/disable DM interactions, reply to non-directed messages, etc.), view the [`.env.template`](/.env.template) file provided.
 
