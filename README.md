@@ -29,6 +29,10 @@
 > [!NOTE]
 > You must also have a Discord app to use this app. Follow these [instructions](#-create-your-discord-app-and-set-your-variables) to create your Discord app.
 
+## 📺 Video overview (watch on YouTube)
+
+[![Video Title](https://img.youtube.com/vi/HDyCAV-xuMw/0.jpg)](https://www.youtube.com/watch?v=HDyCAV-xuMw)
+
 ## ✨ Features
 
 - 🧠 [Letta](https://github.com/letta-ai/letta)
