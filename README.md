@@ -84,12 +84,16 @@
 
 # 🚀 Running the app locally
 
-## 💻 Set up your local Letta server
+> [!NOTE]
+> These are instructions for running the *Discord bot server* locally, which connects a Letta server to Discord.
+> If you're using Letta Cloud, all you'll need is your Letta Cloud API key + the Discord bot server, but if you're self-hosting, you'll also need to set up a Letta server.
 
-Follow the [quickstart guide](https://docs.letta.com/quickstart) to run your local Letta server.
+## 💻 Grab a Letta API key
+
+Follow the [quickstart guide](https://docs.letta.com/quickstart) to get your own Letta Cloud API key.
+
 You can run your own Letta server using [Letta Desktop](https://docs.letta.com/quickstart/desktop) or [Docker](https://docs.letta.com/quickstart/docker).
-By default, the Letta server will run on `http://localhost:8283`.
-
+If you're self-hosting a server, the Letta server will run on `http://localhost:8283` by default (that will be your `LETTA_BASE_URL`).
 
 ## 👉 Set up app
 
@@ -147,8 +151,8 @@ Environment variables can be controlled by setting them in your `.env` file or b
 
 The following environment variables can be set in the `.env` file:
 
-* `LETTA_TOKEN`: The password of your Letta server (if you self-deployed a server). Not applicable if you are not using a password (see [docs](https://docs.letta.com/guides/server/docker#password-protection-advanced)).
-* `LETTA_BASE_URL`: The base URL of your Letta server. This is usually `http://localhost:8283`.
+* `LETTA_API_KEY`: The password of your Letta server (if you self-deployed a server). Not applicable if you are not using a password (see [docs](https://docs.letta.com/guides/server/docker#password-protection-advanced)).
+* `LETTA_BASE_URL`: The base URL of your Letta server. Defaults to `https://api.letta.com` (Letta Cloud). If you're using a self-hosted Letta server, this is usually `http://localhost:8283`.
 * `LETTA_AGENT_ID`: The ID of the Letta agent to use for the bot.
 
 * `APP_ID`: The ID of your Discord application.

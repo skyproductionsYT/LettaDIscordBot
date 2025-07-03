@@ -5,8 +5,8 @@ import { Message, OmitPartialGroupDMChannel } from "discord.js";
 
 // If the token is not set, just use a dummy value
 const client = new LettaClient({
-  token: process.env.LETTA_TOKEN || 'dummy',
-  baseUrl: process.env.LETTA_BASE_URL,
+  token: process.env.LETTA_API_KEY || 'your_letta_api_key',
+  baseUrl: process.env.LETTA_BASE_URL || 'https://api.letta.com',
 });
 const AGENT_ID = process.env.LETTA_AGENT_ID;
 const USE_SENDER_PREFIX = process.env.LETTA_USE_SENDER_PREFIX === 'true';
@@ -137,7 +137,7 @@ async function sendMessage(
       : message
   };
 
-  // Typing indicator: pulse now and every 8 s until cleaned up
+  // Typing indicator: pulse now and every 8 s until cleaned up
   void discordMessageObject.channel.sendTyping();
   const typingInterval = setInterval(() => {
     void discordMessageObject.channel
