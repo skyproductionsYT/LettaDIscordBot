@@ -24,9 +24,6 @@
 ### 
 
 > [!NOTE]
-> You must have a Letta server running to use this app. Follow this [quickstart guide](https://docs.letta.com/quickstart) to run your local Letta server.
-
-> [!NOTE]
 > You must also have a Discord app to use this app. Follow these [instructions](#-create-your-discord-app-and-set-your-variables) to create your Discord app.
 
 ## 📺 Video overview (watch on YouTube)
