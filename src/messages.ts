@@ -19,10 +19,47 @@ enum MessageType {
 // Helper function to process stream
 const processStream = async (response: Stream<LettaStreamingResponse>) => {
   let agentMessageResponse = '';
-  for await (const chunk of response) {
-    if ('content' in chunk && typeof chunk.content === 'string') {
-      agentMessageResponse += chunk.content;
+  try {
+    for await (const chunk of response) {
+      // Handle different message types that might be returned
+      if ('messageType' in chunk) {
+        // Handle different message types including the new stop_reason
+        switch (chunk.messageType) {
+          case 'assistant_message':
+            if ('content' in chunk && typeof chunk.content === 'string') {
+              agentMessageResponse += chunk.content;
+            }
+            break;
+          case 'stop_reason':
+            // This is a new message type that indicates the stream has stopped
+            console.log('🛑 Stream stopped:', chunk);
+            break;
+          case 'reasoning_message':
+            // Handle reasoning messages if needed
+            console.log('🧠 Reasoning:', chunk);
+            break;
+          case 'tool_call_message':
+            // Handle tool call messages if needed
+            console.log('🔧 Tool call:', chunk);
+            break;
+          case 'tool_return_message':
+            // Handle tool return messages if needed
+            console.log('🔧 Tool return:', chunk);
+            break;
+          case 'usage_statistics':
+            // Handle usage statistics
+            console.log('📊 Usage stats:', chunk);
+            break;
+          default:
+            console.log('📨 Unknown message type:', chunk.messageType, chunk);
+        }
+      } else {
+        console.log('❓ Chunk without messageType:', chunk);
+      }
     }
+  } catch (error) {
+    console.error('❌ Error processing stream:', error);
+    throw error;
   }
   return agentMessageResponse;
 }
@@ -98,12 +135,40 @@ async function sendMessage(discordMessageObject: OmitPartialGroupDMChannel<Messa
     });
 
     if (response) { // show typing indicator and process message if there is a stream
-      const [_, agentMessageResponse] = await Promise.all([
-        discordMessageObject.channel.sendTyping(),
-        await processStream(response)
-      ]);
-  
-      return agentMessageResponse || ""
+      // Start typing indicator and keep it active
+      let typingInterval: NodeJS.Timeout | undefined;
+      const startTyping = async () => {
+        await discordMessageObject.channel.sendTyping();
+        // Keep typing indicator active by refreshing every 8 seconds
+        typingInterval = setInterval(async () => {
+          try {
+            await discordMessageObject.channel.sendTyping();
+          } catch (error) {
+            console.error('Error refreshing typing indicator:', error);
+          }
+        }, 8000);
+      };
+      
+      // Start typing immediately (don't await)
+      startTyping();
+      
+      try {
+        // Process the stream
+        const agentMessageResponse = await processStream(response);
+        
+        // Clear the typing interval
+        if (typingInterval) {
+          clearInterval(typingInterval);
+        }
+        
+        return agentMessageResponse || ""
+      } catch (error) {
+        // Clear the typing interval on error
+        if (typingInterval) {
+          clearInterval(typingInterval);
+        }
+        throw error;
+      }
     }
 
     return ""
