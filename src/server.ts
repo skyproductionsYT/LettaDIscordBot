@@ -151,20 +151,26 @@ client.on('messageCreate', async (message) => {
     await message.channel.sendTyping();
     
     let msgContent = message.content;
+    let messageType = MessageType.MENTION; // Default to mention
 
-    // If it's a reply, fetch the original message
+    // If it's a reply, fetch the original message and check if it's to the bot
     if (message.reference && message.reference.messageId) {
         const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
-        msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
-        const msg = await sendMessage(message, MessageType.REPLY);
-        if (msg !== "") {
-          await message.reply(msg);
+        
+        // Check if the original message was from the bot
+        if (originalMessage.author.id === client.user?.id) {
+          // This is a reply to the bot
+          messageType = MessageType.REPLY;
+          msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
+        } else {
+          // This is a reply to someone else, but the bot is mentioned or it's a generic message
+          messageType = message.mentions.has(client.user || '') ? MessageType.MENTION : MessageType.GENERIC;
         }
-    } else {
-        const msg = await sendMessage(message, MessageType.MENTION);
-        if (msg !== "") {
-          await message.reply(msg);
-        }
+    }
+    
+    const msg = await sendMessage(message, messageType);
+    if (msg !== "") {
+      await message.reply(msg);
     }
     return;
   }
