@@ -76,26 +76,33 @@ async function startRandomEventTimer() {
       if (Math.random() < FIRING_PROBABILITY) {
           console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
 
-          // Generate the response via the API
-          const msg = await sendTimerMessage();
+          // Get the channel if available
+          let channel = null;
+          if (CHANNEL_ID) {
+              try {
+                  channel = await client.channels.fetch(CHANNEL_ID);
+                  if (!channel || !('send' in channel)) {
+                      console.log("⏰ Channel not found or is not a text channel.");
+                      channel = null;
+                  }
+              } catch (error) {
+                  console.error("⏰ Error fetching channel:", error);
+              }
+          }
 
-          // Pass that response to Discord
-          if (msg !== "") {
-            if (CHANNEL_ID) {
-                try {
-                    const channel = await client.channels.fetch(CHANNEL_ID);
-                    if (channel && 'send' in channel) {
-                        await channel.send(msg);
-                        console.log("⏰ Timer message sent to channel");
-                    } else {
-                        console.log("⏰ Channel not found or is not a text channel.");
-                    }
-                } catch (error) {
-                    console.error("⏰ Error sending timer message:", error);
-                }
-            } else {
-                console.log("⏰ No CHANNEL_ID defined; message not sent.");
-            }
+          // Generate the response via the API, passing the channel for async messages
+          const msg = await sendTimerMessage(channel);
+
+          // Send the final assistant message if there is one
+          if (msg !== "" && channel) {
+              try {
+                  await channel.send(msg);
+                  console.log("⏰ Timer message sent to channel");
+              } catch (error) {
+                  console.error("⏰ Error sending timer message:", error);
+              }
+          } else if (!channel) {
+              console.log("⏰ No CHANNEL_ID defined or channel not available; message not sent.");
           }
       } else {
           console.log(`⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`);
