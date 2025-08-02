@@ -20,8 +20,25 @@ enum MessageType {
 }
 
 // Helper function to process stream
-const processStream = async (response: Stream<LettaStreamingResponse>) => {
+const processStream = async (
+  response: Stream<LettaStreamingResponse>,
+  discordTarget?: OmitPartialGroupDMChannel<Message<boolean>> | { send: (content: string) => Promise<any> }
+) => {
   let agentMessageResponse = '';
+  const sendAsyncMessage = async (content: string) => {
+    if (discordTarget && content.trim()) {
+      try {
+        if ('reply' in discordTarget) {
+          await discordTarget.channel.send(content);
+        } else {
+          await discordTarget.send(content);
+        }
+      } catch (error) {
+        console.error('❌ Error sending async message:', error);
+      }
+    }
+  };
+
   try {
     for await (const chunk of response) {
       // Handle different message types that might be returned
@@ -37,12 +54,29 @@ const processStream = async (response: Stream<LettaStreamingResponse>) => {
             break;
           case 'reasoning_message':
             console.log('🧠 Reasoning:', chunk);
+            if ('content' in chunk && typeof chunk.content === 'string') {
+              await sendAsyncMessage(`**Reasoning**\n> ${chunk.content}`);
+            }
             break;
           case 'tool_call_message':
             console.log('🔧 Tool call:', chunk);
+            if ('name' in chunk && typeof chunk.name === 'string') {
+              let toolMessage = `**Tool Call (${chunk.name})**`;
+              if ('arguments' in chunk && chunk.arguments) {
+                toolMessage += `\n> Arguments: ${JSON.stringify(chunk.arguments)}`;
+              }
+              await sendAsyncMessage(toolMessage);
+            }
             break;
           case 'tool_return_message':
             console.log('🔧 Tool return:', chunk);
+            if ('name' in chunk && typeof chunk.name === 'string') {
+              let returnMessage = `**Tool Return (${chunk.name})**`;
+              if ('return_value' in chunk && chunk.return_value) {
+                returnMessage += `\n> ${JSON.stringify(chunk.return_value).substring(0, 200)}...`;
+              }
+              await sendAsyncMessage(returnMessage);
+            }
             break;
           case 'usage_statistics':
             console.log('📊 Usage stats:', chunk);
@@ -63,7 +97,7 @@ const processStream = async (response: Stream<LettaStreamingResponse>) => {
 
 // TODO refactor out the core send message / stream parse logic to clean up this function
 // Sending a timer message
-async function sendTimerMessage() {
+async function sendTimerMessage(channel?: { send: (content: string) => Promise<any> }) {
   if (!AGENT_ID) {
     console.error('Error: LETTA_AGENT_ID is not set');
     return SURFACE_ERRORS
@@ -84,7 +118,7 @@ async function sendTimerMessage() {
     });
 
     if (response) {
-      return (await processStream(response)) || "";
+      return (await processStream(response, channel)) || "";
     }
 
     return "";
@@ -151,7 +185,7 @@ async function sendMessage(
       messages: [lettaMessage]
     });
 
-    const agentMessageResponse = response ? await processStream(response) : "";
+    const agentMessageResponse = response ? await processStream(response, discordMessageObject) : "";
     return agentMessageResponse || "";
   } catch (error) {
     if (error instanceof Error && /timeout/i.test(error.message)) {
