@@ -37,12 +37,27 @@ const processStream = async (response: Stream<LettaStreamingResponse>) => {
             break;
           case 'reasoning_message':
             console.log('🧠 Reasoning:', chunk);
+            if ('content' in chunk && typeof chunk.content === 'string') {
+              agentMessageResponse += `\n\n**Reasoning**\n> ${chunk.content}`;
+            }
             break;
           case 'tool_call_message':
             console.log('🔧 Tool call:', chunk);
+            if ('name' in chunk && typeof chunk.name === 'string') {
+              agentMessageResponse += `\n\n**Tool Call (${chunk.name})**`;
+              if ('arguments' in chunk && chunk.arguments) {
+                agentMessageResponse += `\n> Arguments: ${JSON.stringify(chunk.arguments)}`;
+              }
+            }
             break;
           case 'tool_return_message':
             console.log('🔧 Tool return:', chunk);
+            if ('name' in chunk && typeof chunk.name === 'string') {
+              agentMessageResponse += `\n\n**Tool Return (${chunk.name})**`;
+              if ('return_value' in chunk && chunk.return_value) {
+                agentMessageResponse += `\n> ${JSON.stringify(chunk.return_value).substring(0, 200)}...`;
+              }
+            }
             break;
           case 'usage_statistics':
             console.log('📊 Usage stats:', chunk);
