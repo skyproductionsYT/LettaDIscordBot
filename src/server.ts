@@ -77,13 +77,14 @@ async function startRandomEventTimer() {
           console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
 
           // Get the channel if available
-          let channel = null;
+          let channel: { send: (content: string) => Promise<any> } | undefined = undefined;
           if (CHANNEL_ID) {
               try {
-                  channel = await client.channels.fetch(CHANNEL_ID);
-                  if (!channel || !('send' in channel)) {
+                  const fetchedChannel = await client.channels.fetch(CHANNEL_ID);
+                  if (fetchedChannel && 'send' in fetchedChannel) {
+                      channel = fetchedChannel as any;
+                  } else {
                       console.log("⏰ Channel not found or is not a text channel.");
-                      channel = null;
                   }
               } catch (error) {
                   console.error("⏰ Error fetching channel:", error);
