@@ -1,40 +1,24 @@
-// src/server.ts
-import "dotenv/config";
-import express from "express";
-import {
-  Client,
-  GatewayIntentBits,
-  Message,
-  OmitPartialGroupDMChannel,
-  Partials,
-} from "discord.js";
-import { sendMessage, sendTimerMessage, MessageType } from "./messages";
-import { limitEmojis } from "./limitEmojis";
-
-// 👇 NEW: vision helpers
-import { messageHasImages, sendVisionReply } from "./vision";
+import 'dotenv/config';
+import express from 'express';
+import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
+import { sendMessage, sendTimerMessage, MessageType } from './messages';
+import { limitEmojis } from './limitEmojis';
+import { messageHasImages, sendVisionReply } from './vision'; // 👈 vision
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === "true";
-const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === "true";
-const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === "true";
-const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === "true";
-const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID; // Optional env var
+const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === 'true';
+const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
+const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
+const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;
-const ENABLE_TIMER = process.env.ENABLE_TIMER === "true";
-const TIMER_INTERVAL_MINUTES = parseInt(
-  process.env.TIMER_INTERVAL_MINUTES || "15",
-  10
-);
-const FIRING_PROBABILITY = parseFloat(
-  process.env.FIRING_PROBABILITY || "0.1"
-);
+const ENABLE_TIMER = process.env.ENABLE_TIMER === 'true';
+const TIMER_INTERVAL_MINUTES = parseInt(process.env.TIMER_INTERVAL_MINUTES || '15', 10);
+const FIRING_PROBABILITY = parseFloat(process.env.FIRING_PROBABILITY || '0.1');
 
 function truncateMessage(message: string, maxLength: number): string {
-  if (message.length > maxLength) {
-    return message.substring(0, maxLength - 3) + "...";
-  }
+  if (message.length > maxLength) return message.substring(0, maxLength - 3) + '...';
   return message;
 }
 
@@ -45,199 +29,131 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel]
 });
 
-client.once("ready", () => {
+// ❗ Update for discord.js deprecation notice you saw in logs:
+client.once('clientReady', () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
-// Helper to reply with sanitized text (Keeping Discord 2k char limit)
-async function safeReply(
-  message: OmitPartialGroupDMChannel<Message<boolean>>,
-  text: string
-) {
+async function safeSend(channelOrMsg: { reply?: (s: string)=>Promise<any>, send?: (s: string)=>Promise<any> }, text: string) {
   const cleaned = limitEmojis(text).slice(0, 2000);
-  await message.reply(cleaned);
-  console.log(`Message sent: ${cleaned}`);
+  if (typeof (channelOrMsg as any).reply === 'function') {
+    await (channelOrMsg as any).reply(cleaned);
+  } else if (typeof (channelOrMsg as any).send === 'function') {
+    await (channelOrMsg as any).send(cleaned);
+  }
 }
 
-async function processAndSendMessage(
-  message: OmitPartialGroupDMChannel<Message<boolean>>,
-  messageType: MessageType
-) {
+// Helper: send a normal (non-vision) message via Letta
+async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
   try {
-    // If there are image(s), route to vision (Letta multimodal)
-    if (messageHasImages(message as Message<boolean>)) {
-      try {
-        const reply = await sendVisionReply(message as Message<boolean>);
-        if (reply) {
-          await safeReply(message, reply);
-        }
-        return;
-      } catch (e) {
-        console.error("🛑 Vision reply failed, falling back to text:", e);
-        // If vision fails, fall back to your existing text flow
-      }
-    }
-
-    // Text-only (or vision fallback):
     const msg = await sendMessage(message, messageType);
-    if (msg !== "") {
-      await safeReply(message, msg);
-    }
+    if (msg) await safeSend(message, msg);
   } catch (error) {
     console.error("🛑 Error processing and sending message:", error);
   }
 }
 
-// Randomized event timer
 async function startRandomEventTimer() {
   if (!ENABLE_TIMER) {
     console.log("Timer feature is disabled.");
     return;
   }
-
   const minMinutes = 1;
-  const randomMinutes =
-    minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
+  const randomMinutes = minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
   console.log(`⏰ Timer scheduled to fire in ${randomMinutes} minutes`);
   const delay = randomMinutes * 60 * 1000;
 
   setTimeout(async () => {
     console.log(`⏰ Timer fired after ${randomMinutes} minutes`);
-
     if (Math.random() < FIRING_PROBABILITY) {
       console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
-
-      let channel: { send: (content: string) => Promise<any> } | undefined =
-        undefined;
+      let channel: { send: (content: string) => Promise<any> } | undefined;
       if (CHANNEL_ID) {
         try {
-          const fetchedChannel = await client.channels.fetch(CHANNEL_ID);
-          if (fetchedChannel && "send" in fetchedChannel) {
-            channel = fetchedChannel as any;
-          } else {
-            console.log("⏰ Channel not found or is not a text channel.");
-          }
+          const fetched = await client.channels.fetch(CHANNEL_ID);
+          if (fetched && 'send' in fetched) channel = fetched as any;
         } catch (error) {
           console.error("⏰ Error fetching channel:", error);
         }
       }
-
       const msg = await sendTimerMessage(channel);
-
-      if (msg !== "" && channel) {
-        try {
-          const cleaned = limitEmojis(msg).slice(0, 2000);
-          await channel.send(cleaned);
-          console.log("⏰ Timer message sent to channel");
-        } catch (error) {
-          console.error("⏰ Error sending timer message:", error);
-        }
+      if (msg && channel) {
+        try { await safeSend(channel, msg); } catch (e) { console.error("⏰ Error sending timer message:", e); }
       } else if (!channel) {
-        console.log(
-          "⏰ No CHANNEL_ID defined or channel not available; message not sent."
-        );
+        console.log("⏰ No CHANNEL_ID defined or channel not available; message not sent.");
       }
     } else {
-      console.log(
-        `⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`
-      );
+      console.log(`⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`);
     }
-
-    setTimeout(() => {
-      startRandomEventTimer();
-    }, 1000);
+    setTimeout(() => startRandomEventTimer(), 1000);
   }, delay);
 }
 
-// Message handler
-client.on("messageCreate", async (message) => {
-  if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) {
-    console.log(
-      `📩 Ignoring message from other channels (only listening on channel=${CHANNEL_ID})...`
-    );
-    return;
-  }
-
-  if (message.author.id === client.user?.id) {
-    console.log(`📩 Ignoring message from myself...`);
-    return;
-  }
-
-  if (message.author.bot && !RESPOND_TO_BOTS) {
-    console.log(`📩 Ignoring other bot...`);
-    return;
-  }
-
-  if (message.content.startsWith("!")) {
-    console.log(`📩 Ignoring message that starts with !...`);
-    return;
-  }
+client.on('messageCreate', async (message) => {
+  if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) return;
+  if (message.author.id === client.user?.id) return;
+  if (message.author.bot && !RESPOND_TO_BOTS) return;
+  if (message.content.startsWith('!')) return;
 
   // DMs
-  if (message.guild === null) {
-    console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
+  if (!message.guild) {
     if (RESPOND_TO_DMS) {
-      processAndSendMessage(message, MessageType.DM);
-    } else {
-      console.log(`📩 Ignoring DM...`);
+      // If images in DM, route through vision:
+      if (messageHasImages(message)) {
+        const visionReply = await sendVisionReply(message, MessageType.DM);
+        if (visionReply) await safeSend(message, visionReply);
+      } else {
+        await processAndSendMessage(message, MessageType.DM);
+      }
     }
     return;
   }
 
-  // Mentions or replies
-  if (
-    RESPOND_TO_MENTIONS &&
-    (message.mentions.has(client.user || "") || message.reference)
-  ) {
-    console.log(
-      `📩 Received message from ${message.author.username}: ${message.content}`
-    );
+  // Mentions / replies
+  if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
     await message.channel.sendTyping();
 
     let msgContent = message.content;
     let messageType = MessageType.MENTION;
 
-    if (message.reference && message.reference.messageId) {
-      const originalMessage = await message.channel.messages.fetch(
-        message.reference.messageId
-      );
-
+    if (message.reference?.messageId) {
+      const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
       if (originalMessage.author.id === client.user?.id) {
         messageType = MessageType.REPLY;
-        msgContent = `[Replying to previous message: "${truncateMessage(
-          originalMessage.content,
-          MESSAGE_REPLY_TRUNCATE_LENGTH
-        )}"] ${msgContent}`;
+        msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
       } else {
-        messageType = message.mentions.has(client.user || "")
-          ? MessageType.MENTION
-          : MessageType.GENERIC;
+        messageType = message.mentions.has(client.user || '') ? MessageType.MENTION : MessageType.GENERIC;
       }
     }
 
-    const msg = await sendMessage(message, messageType);
-    if (msg !== "") {
-      await safeReply(message, msg);
+    // Vision path for mentions/replies
+    if (messageHasImages(message)) {
+      const visionReply = await sendVisionReply(message, messageType);
+      if (visionReply) await safeSend(message, visionReply);
+    } else {
+      const msg = await sendMessage(message, messageType);
+      if (msg) await safeSend(message, msg);
     }
     return;
   }
 
-  // Generic
+  // Generic non-mention messages
   if (RESPOND_TO_GENERIC) {
-    console.log(
-      `📩 Received (non-mention) message from ${message.author.username}: ${message.content}`
-    );
-    processAndSendMessage(message, MessageType.GENERIC);
-    return;
+    if (messageHasImages(message)) {
+      const visionReply = await sendVisionReply(message, MessageType.GENERIC);
+      if (visionReply) await safeSend(message, visionReply);
+    } else {
+      await processAndSendMessage(message, MessageType.GENERIC);
+    }
   }
 });
 
 // Start
 app.listen(PORT, () => {
-  console.log("Listening on port", PORT);
+  console.log('Listening on port', PORT);
   client.login(process.env.DISCORD_TOKEN);
   startRandomEventTimer();
 });
