@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
 import { sendMessage, sendTimerMessage, MessageType } from './messages';
-import { limitEmojis } from './limitEmojis';  // 👈 added import
+import { limitEmojis } from './limitEmojis';  // 👈 emoji limiter
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,7 +10,7 @@ const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === 'true';
 const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
 const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
-const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;  // Optional env var
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;
 const ENABLE_TIMER = process.env.ENABLE_TIMER === 'true';
 const TIMER_INTERVAL_MINUTES = parseInt(process.env.TIMER_INTERVAL_MINUTES || '15', 10);
