@@ -1,63 +1,79 @@
-import { Message } from "discord.js";
-
-/** Minimal shape for an image attachment we care about */
-export type ImageAttachment = {
-  url: string;
-  filename?: string;
-  contentType?: string;
-};
+// src/vision.ts
+import type { Message, Attachment } from "discord.js";
+import { sendMessage, MessageType } from "./messages";
 
 /**
- * Collect image URLs from a Discord message.
- * - Includes real attachments (contentType starts with image/)
- * - Also checks embeds (image/thumbnail)
+ * True if the Discord message includes any image attachments or stickers.
  */
-export function getImageAttachments(msg: Message): ImageAttachment[] {
-  const images: ImageAttachment[] = [];
+export function messageHasImages(message: Message): boolean {
+  // Attachments with image content-types (png, jpg, gif, webp, etc.)
+  const hasImageAttachment =
+    message.attachments?.some((a: Attachment) =>
+      (a.contentType ?? "").toLowerCase().startsWith("image/")
+    ) ?? false;
 
-  // 1) File attachments (PNG/JPG/GIF/WebP, etc.)
-  msg.attachments.forEach((att) => {
-    const ct = att.contentType ?? "";
-    if (ct.startsWith("image/")) {
-      images.push({
-        url: att.url,
-        filename: att.name ?? undefined,
-        contentType: ct,
-      });
-    }
-  });
+  // Stickers often are treated as graphics as well
+  const hasSticker = (message.stickers?.size ?? 0) > 0;
 
-  // 2) Embeds with images (e.g., when a link unfurls)
-  msg.embeds.forEach((emb) => {
-    const url = emb.image?.url || emb.thumbnail?.url;
-    if (url) {
-      images.push({ url });
-    }
-  });
-
-  return images;
+  return hasImageAttachment || hasSticker;
 }
 
 /**
- * If you want to pass a simple text hint to your LLM when images are present,
- * this appends a human-readable line listing them.
- * (This doesn’t give the model “vision”; it just tells it there are images + URLs.)
+ * Build a vision-augmented prompt string from a Discord message:
+ * - Keeps the user text
+ * - Appends a section with public image URLs (if present)
  */
-export function appendImageHintToText(
-  original: string,
-  images: ImageAttachment[]
-): string {
-  if (images.length === 0) return original;
+function buildVisionPrompt(message: Message): string {
+  const userText = message.content?.trim() ?? "";
 
-  const hints = images
-    .map((img, idx) => {
-      const label = img.filename ? `${img.filename}` : img.url;
-      return `[image ${idx + 1}: ${label}]`;
-    })
-    .join(" ");
+  const imageUrls: string[] = [];
+  for (const [, a] of message.attachments) {
+    const ct = (a.contentType ?? "").toLowerCase();
+    if (ct.startsWith("image/")) {
+      // Prefer external (proxyCDN) URL if present, else fallback to .url
+      imageUrls.push(a.proxyURL || a.url);
+    }
+  }
 
-  // Feel free to customize this phrasing:
-  return `${original}\n\n(Attached ${images.length} image${
-    images.length > 1 ? "s" : ""
-  }: ${hints})`;
+  const hasStickers = (message.stickers?.size ?? 0) > 0;
+
+  let suffix = "";
+  if (imageUrls.length > 0) {
+    const lines = imageUrls.map((u, i) => `Image ${i + 1}: ${u}`).join("\n");
+    suffix += `\n\n[IMAGES]\n${lines}`;
+  }
+  if (hasStickers) {
+    suffix += `\n\n[NOTE] This message also contains ${message.stickers.size} Discord sticker(s).`;
+  }
+
+  // Give the model a nudge to actually look at them
+  if (suffix) {
+    suffix += `\n\nPlease use the linked image(s) to answer.`;
+  }
+
+  // If there was no user text, still send something meaningful
+  return (userText ? userText : "(no text)") + suffix;
+}
+
+/**
+ * Sends a Letta response *as if* the user had typed the vision-augmented text.
+ * We avoid changing your Letta wiring by creating a "synthetic" Discord message
+ * object that only overrides .content, then pass it into your existing sendMessage().
+ *
+ * Returns the assistant reply string (or empty string if nothing to send).
+ */
+export async function sendVisionReply(
+  message: Message,
+  messageType: MessageType
+): Promise<string> {
+  const augmented = buildVisionPrompt(message);
+
+  // Create a synthetic message that reuses every property from the original,
+  // but overrides the textual content we send to Letta:
+  const synthetic = Object.create(message) as Message;
+  (synthetic as any).content = augmented;
+
+  // Reuse your existing message flow so logs, memory, etc. are consistent
+  const reply = await sendMessage(synthetic as any, messageType);
+  return reply ?? "";
 }
