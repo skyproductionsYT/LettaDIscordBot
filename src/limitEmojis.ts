@@ -3,7 +3,7 @@ export function limitEmojis(
   input: string,
   opts: { maxTotal?: number; maxRun?: number } = {}
 ): string {
-  const { maxTotal = Number(process.env.MAX_EMOJIS ?? 10), maxRun = Number(process.env.MAX_EMOJI_RUN ?? 3) } = opts;
+  const { maxTotal = Number(process.env.MAX_EMOJIS ?? 5), maxRun = Number(process.env.MAX_EMOJI_RUN ?? 3) } = opts;
 
   const custom = /<a?:\w{2,}:\d+>/g;
   const uni = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu;
