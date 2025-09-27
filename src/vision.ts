@@ -1,27 +1,28 @@
 // src/vision.ts
-import { Attachment, Message, OmitPartialGroupDMChannel } from "discord.js";
-import Letta from "@letta-ai/letta-client";
+import { Attachment, Message } from "discord.js";
+import { Client as LettaClient } from "@letta-ai/letta-client";
 
-// ---- Env / client ----
+// ---- Env / Letta client ----
 const LETTA_API_KEY = process.env.LETTA_API_KEY!;
-const LETTA_AGENT_ID = process.env.LETTA_AGENT_ID!; // This agent MUST use a vision-capable model (e.g., gpt-4o-mini)
+if (!LETTA_API_KEY) {
+  throw new Error("LETTA_API_KEY is not set");
+}
 
-const letta = new Letta({ apiKey: LETTA_API_KEY });
+const letta = new LettaClient({ apiKey: LETTA_API_KEY });
 
 // ---- Helpers ----
-export function messageHasImages(msg: OmitPartialGroupDMChannel<Message<boolean>>): boolean {
+export function messageHasImages(msg: Message): boolean {
   // Discord attachments with image/* content-type
   const hasImageAttachments =
-    msg.attachments?.some((a: Attachment) => (a.contentType || "").startsWith("image/")) ?? false;
+    (msg.attachments?.some((a: Attachment) => (a.contentType || "").startsWith("image/"))) ?? false;
 
-  // Very light URL sniff (optional)
-  const urlRegex = /(https?:\/\/[^\s)]+?\.(?:png|jpg|jpeg|gif|webp))/i;
-  const hasLinkedImage = urlRegex.test(msg.content || "");
+  // Very light URL sniff (optional) for linked images in the text
+  const hasLinkedImage = /(https?:\/\/[^\s)]+?\.(?:png|jpg|jpeg|gif|webp))/i.test(msg.content || "");
 
   return hasImageAttachments || hasLinkedImage;
 }
 
-function getImageUrls(msg: OmitPartialGroupDMChannel<Message<boolean>>): string[] {
+function getImageUrlsFromMessage(msg: Message): string[] {
   const urls: string[] = [];
 
   // Attachments
@@ -41,46 +42,74 @@ function getImageUrls(msg: OmitPartialGroupDMChannel<Message<boolean>>): string[
   return Array.from(new Set(urls));
 }
 
-// ---- Vision send ----
-export async function sendVisionReply(
-  msg: OmitPartialGroupDMChannel<Message<boolean>>
-): Promise<string> {
-  const images = getImageUrls(msg);
-  if (images.length === 0) return "";
+function getImageUrlsFromPrompt(prompt: string): string[] {
+  // pulls out any http(s) URLs that look like images (works with the prompt we build below)
+  const urls: string[] = [];
+  const urlRegexGlobal = /(https?:\/\/[^\s)]+?\.(?:png|jpg|jpeg|gif|webp))/gi;
+  let m: RegExpExecArray | null;
+  while ((m = urlRegexGlobal.exec(prompt)) !== null) {
+    urls.push(m[0]);
+  }
+  return Array.from(new Set(urls));
+}
 
-  // Build multimodal content parts for Letta
+// ---- Prompt builder used by server.ts (keeps things deterministic) ----
+export function buildVisionPrompt(msg: Message): string {
+  const imageUrls = getImageUrlsFromMessage(msg);
+
+  const header =
+    "You are a concise vision assistant. Use ONLY the linked image(s) below. " +
+    "Describe what is shown and answer the user directly in plain text. " +
+    "Do not include any internal thoughts or 'Thinking:' text.\n";
+
+  const list =
+    imageUrls.length > 0
+      ? "\n[IMAGES]\n" +
+        imageUrls.map((u, i) => `Image ${i + 1}: ${u}`).join("\n")
+      : "";
+
+  const userLine =
+    "\n\nUser message/context:\n" +
+    (msg.content?.trim() || "(no additional text)");
+
+  return `${header}${list}${userLine}`.trim();
+}
+
+// ---- Letta send (works for vision & plain text) ----
+export async function sendVisionReply(
+  agentId: string,
+  prompt: string
+): Promise<string> {
+  // Extract any image URLs from the prompt and keep the rest as text
+  const imageUrls = getImageUrlsFromPrompt(prompt);
+
+  const textOnly = prompt; // we can keep URLs in text too; Letta will use input_image parts explicitly
+
   const parts: Array<
     | { type: "input_text"; text: string }
     | { type: "input_image"; image_url: string }
-  > = [
-    {
-      type: "input_text",
-      text:
-        "You are a concise vision assistant. Only use the provided image(s). " +
-        "Identify what is shown and answer the user directly. Do not include any 'Thinking:' text."
-    }
-  ];
+  > = [{ type: "input_text", text: textOnly }];
 
-  for (const url of images) {
+  for (const url of imageUrls) {
     parts.push({ type: "input_image", image_url: url });
   }
 
-  // Stream from Letta Agents API (multimodal)
-  const stream = await letta.agents.messages.createStreamed(LETTA_AGENT_ID, {
-    input: [{ role: "user", content: parts }]
+  // stream a response from Letta Agents
+  const stream = await letta.agents.messages.createStreamed(agentId, {
+    input: [{ role: "user", content: parts }],
   });
 
   let out = "";
   for await (const ev of stream) {
-    if (ev.messageType === "assistant_message" && ev.content) {
-      // ev.content is an array of assistant parts; collect text pieces
+    if (ev.messageType === "assistant_message" && Array.isArray(ev.content)) {
       for (const c of ev.content) {
-        if (c.type === "output_text" && typeof c.text === "string") out += c.text;
+        if (c.type === "output_text" && typeof c.text === "string") {
+          out += c.text;
+        }
       }
     }
     if (ev.messageType === "stop_reason") break;
   }
 
-  // Safety net
   return out.trim().slice(0, 2000);
 }
