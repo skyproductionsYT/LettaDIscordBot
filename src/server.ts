@@ -1,27 +1,70 @@
-import 'dotenv/config';
-import express from 'express';
-import { Client, GatewayIntentBits, Message, OmitPartialGroupDMChannel, Partials } from 'discord.js';
-import { sendMessage, sendTimerMessage, MessageType } from './messages';
-import { limitEmojis } from './limitEmojis';
-import { messageHasImages, sendVisionReply } from './vision'; // 👈 vision
+// src/server.ts
+import "dotenv/config";
+import express from "express";
+import {
+  Client,
+  GatewayIntentBits,
+  Message,
+  OmitPartialGroupDMChannel,
+  Partials,
+} from "discord.js";
 
+import { sendMessage, sendTimerMessage, MessageType } from "./messages";
+import { limitEmojis } from "./limitEmojis";
+import { messageHasImages, sendVisionReply } from "./vision"; // 👈 vision
+
+// -----------------------------
+// Config
+// -----------------------------
 const app = express();
 const PORT = process.env.PORT || 3001;
-const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === 'true';
-const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === 'true';
-const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === 'true';
-const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === 'true';
-const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
-const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;
-const ENABLE_TIMER = process.env.ENABLE_TIMER === 'true';
-const TIMER_INTERVAL_MINUTES = parseInt(process.env.TIMER_INTERVAL_MINUTES || '15', 10);
-const FIRING_PROBABILITY = parseFloat(process.env.FIRING_PROBABILITY || '0.1');
 
+const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === "true";
+const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === "true";
+const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === "true";
+const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === "true";
+
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ""; // optional
+const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;
+
+const ENABLE_TIMER = process.env.ENABLE_TIMER === "true";
+const TIMER_INTERVAL_MINUTES = parseInt(
+  process.env.TIMER_INTERVAL_MINUTES || "15",
+  10
+);
+const FIRING_PROBABILITY = parseFloat(
+  process.env.FIRING_PROBABILITY || "0.1"
+);
+
+// -----------------------------
+// Utils
+// -----------------------------
 function truncateMessage(message: string, maxLength: number): string {
-  if (message.length > maxLength) return message.substring(0, maxLength - 3) + '...';
+  if (message.length > maxLength) {
+    return message.substring(0, maxLength - 3) + "...";
+  }
   return message;
 }
 
+async function processAndSendMessage(
+  message: OmitPartialGroupDMChannel<Message<boolean>>,
+  messageType: MessageType
+) {
+  try {
+    const msg = await sendMessage(message, messageType);
+    if (msg !== "") {
+      const cleaned = limitEmojis(msg).slice(0, 2000);
+      await message.reply(cleaned);
+      console.log(`Message sent: ${cleaned}`);
+    }
+  } catch (error) {
+    console.error("🛑 Error processing and sending message:", error);
+  }
+}
+
+// -----------------------------
+// Discord Client
+// -----------------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -29,131 +72,194 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Channel]
+  partials: [Partials.Channel],
 });
 
-// ❗ Update for discord.js deprecation notice you saw in logs:
-client.once('clientReady', () => {
+client.once("ready", () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
-async function safeSend(channelOrMsg: { reply?: (s: string)=>Promise<any>, send?: (s: string)=>Promise<any> }, text: string) {
-  const cleaned = limitEmojis(text).slice(0, 2000);
-  if (typeof (channelOrMsg as any).reply === 'function') {
-    await (channelOrMsg as any).reply(cleaned);
-  } else if (typeof (channelOrMsg as any).send === 'function') {
-    await (channelOrMsg as any).send(cleaned);
-  }
-}
-
-// Helper: send a normal (non-vision) message via Letta
-async function processAndSendMessage(message: OmitPartialGroupDMChannel<Message<boolean>>, messageType: MessageType) {
-  try {
-    const msg = await sendMessage(message, messageType);
-    if (msg) await safeSend(message, msg);
-  } catch (error) {
-    console.error("🛑 Error processing and sending message:", error);
-  }
-}
-
+// -----------------------------
+// Randomized Event Timer
+// -----------------------------
 async function startRandomEventTimer() {
   if (!ENABLE_TIMER) {
     console.log("Timer feature is disabled.");
     return;
   }
+
   const minMinutes = 1;
-  const randomMinutes = minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
+  const randomMinutes =
+    minMinutes + Math.floor(Math.random() * (TIMER_INTERVAL_MINUTES - minMinutes));
   console.log(`⏰ Timer scheduled to fire in ${randomMinutes} minutes`);
   const delay = randomMinutes * 60 * 1000;
 
   setTimeout(async () => {
     console.log(`⏰ Timer fired after ${randomMinutes} minutes`);
+
     if (Math.random() < FIRING_PROBABILITY) {
-      console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
-      let channel: { send: (content: string) => Promise<any> } | undefined;
+      console.log(
+        `⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`
+      );
+
+      let channel: { send: (content: string) => Promise<any> } | undefined =
+        undefined;
+
       if (CHANNEL_ID) {
         try {
-          const fetched = await client.channels.fetch(CHANNEL_ID);
-          if (fetched && 'send' in fetched) channel = fetched as any;
+          const fetchedChannel = await client.channels.fetch(CHANNEL_ID);
+          if (fetchedChannel && "send" in fetchedChannel) {
+            channel = fetchedChannel as any;
+          } else {
+            console.log("⏰ Channel not found or is not a text channel.");
+          }
         } catch (error) {
           console.error("⏰ Error fetching channel:", error);
         }
       }
+
       const msg = await sendTimerMessage(channel);
-      if (msg && channel) {
-        try { await safeSend(channel, msg); } catch (e) { console.error("⏰ Error sending timer message:", e); }
+
+      if (msg !== "" && channel) {
+        try {
+          const cleaned = limitEmojis(msg).slice(0, 2000);
+          await channel.send(cleaned);
+          console.log("⏰ Timer message sent to channel");
+        } catch (error) {
+          console.error("⏰ Error sending timer message:", error);
+        }
       } else if (!channel) {
-        console.log("⏰ No CHANNEL_ID defined or channel not available; message not sent.");
+        console.log(
+          "⏰ No CHANNEL_ID defined or channel not available; message not sent."
+        );
       }
     } else {
-      console.log(`⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`);
+      console.log(
+        `⏰ Random event not triggered (${(1 - FIRING_PROBABILITY) * 100}% chance)`
+      );
     }
-    setTimeout(() => startRandomEventTimer(), 1000);
+
+    setTimeout(() => {
+      startRandomEventTimer();
+    }, 1000);
   }, delay);
 }
 
-client.on('messageCreate', async (message) => {
-  if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) return;
-  if (message.author.id === client.user?.id) return;
-  if (message.author.bot && !RESPOND_TO_BOTS) return;
-  if (message.content.startsWith('!')) return;
+// -----------------------------
+// Message Handler
+// -----------------------------
+client.on("messageCreate", async (message) => {
+  // Restrict to CHANNEL_ID (if set)
+  if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) {
+    console.log(
+      `📩 Ignoring message from other channels (only listening on channel=${CHANNEL_ID})...`
+    );
+    return;
+  }
 
-  // DMs
-  if (!message.guild) {
-    if (RESPOND_TO_DMS) {
-      // If images in DM, route through vision:
-      if (messageHasImages(message)) {
-        const visionReply = await sendVisionReply(message, MessageType.DM);
-        if (visionReply) await safeSend(message, visionReply);
-      } else {
-        await processAndSendMessage(message, MessageType.DM);
+  // Ignore self
+  if (message.author.id === client.user?.id) {
+    console.log(`📩 Ignoring message from myself...`);
+    return;
+  }
+
+  // Ignore other bots (unless enabled)
+  if (message.author.bot && !RESPOND_TO_BOTS) {
+    console.log(`📩 Ignoring other bot...`);
+    return;
+  }
+
+  // Ignore commands
+  if (message.content.startsWith("!")) {
+    console.log(`📩 Ignoring message that starts with !...`);
+    return;
+  }
+
+  // ---------- Vision short-circuit ----------
+  // If the message contains image attachments or linked image URLs,
+  // answer with a vision-capable agent and return.
+  if (messageHasImages(message)) {
+    try {
+      await message.channel.sendTyping();
+      const visionText = await sendVisionReply(message);
+      if (visionText) {
+        const cleaned = limitEmojis(visionText).slice(0, 2000);
+        await message.reply(cleaned);
+        return; // do not also run text flow
       }
+    } catch (err) {
+      console.error("🛑 Vision error:", err);
+      // fall through to text logic if something went wrong
+    }
+  }
+
+  // ---------- DMs ----------
+  if (message.guild === null) {
+    console.log(
+      `📩 Received DM from ${message.author.username}: ${message.content}`
+    );
+    if (RESPOND_TO_DMS) {
+      processAndSendMessage(message, MessageType.DM);
+    } else {
+      console.log(`📩 Ignoring DM...`);
     }
     return;
   }
 
-  // Mentions / replies
-  if (RESPOND_TO_MENTIONS && (message.mentions.has(client.user || '') || message.reference)) {
+  // ---------- Mentions / Replies ----------
+  if (
+    RESPOND_TO_MENTIONS &&
+    (message.mentions.has(client.user || "") || message.reference)
+  ) {
+    console.log(
+      `📩 Received message from ${message.author.username}: ${message.content}`
+    );
     await message.channel.sendTyping();
 
     let msgContent = message.content;
     let messageType = MessageType.MENTION;
 
-    if (message.reference?.messageId) {
-      const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
+    if (message.reference && message.reference.messageId) {
+      const originalMessage = await message.channel.messages.fetch(
+        message.reference.messageId
+      );
+
       if (originalMessage.author.id === client.user?.id) {
         messageType = MessageType.REPLY;
-        msgContent = `[Replying to previous message: "${truncateMessage(originalMessage.content, MESSAGE_REPLY_TRUNCATE_LENGTH)}"] ${msgContent}`;
+        msgContent = `[Replying to previous message: "${truncateMessage(
+          originalMessage.content,
+          MESSAGE_REPLY_TRUNCATE_LENGTH
+        )}"] ${msgContent}`;
       } else {
-        messageType = message.mentions.has(client.user || '') ? MessageType.MENTION : MessageType.GENERIC;
+        messageType = message.mentions.has(client.user || "")
+          ? MessageType.MENTION
+          : MessageType.GENERIC;
       }
     }
 
-    // Vision path for mentions/replies
-    if (messageHasImages(message)) {
-      const visionReply = await sendVisionReply(message, messageType);
-      if (visionReply) await safeSend(message, visionReply);
-    } else {
-      const msg = await sendMessage(message, messageType);
-      if (msg) await safeSend(message, msg);
+    const msg = await sendMessage(message, messageType);
+    if (msg !== "") {
+      const cleaned = limitEmojis(msg).slice(0, 2000);
+      await message.reply(cleaned);
     }
     return;
   }
 
-  // Generic non-mention messages
+  // ---------- Generic ----------
   if (RESPOND_TO_GENERIC) {
-    if (messageHasImages(message)) {
-      const visionReply = await sendVisionReply(message, MessageType.GENERIC);
-      if (visionReply) await safeSend(message, visionReply);
-    } else {
-      await processAndSendMessage(message, MessageType.GENERIC);
-    }
+    console.log(
+      `📩 Received (non-mention) message from ${message.author.username}: ${message.content}`
+    );
+    processAndSendMessage(message, MessageType.GENERIC);
+    return;
   }
 });
 
+// -----------------------------
 // Start
+// -----------------------------
 app.listen(PORT, () => {
-  console.log('Listening on port', PORT);
+  console.log("Listening on port", PORT);
   client.login(process.env.DISCORD_TOKEN);
   startRandomEventTimer();
 });
