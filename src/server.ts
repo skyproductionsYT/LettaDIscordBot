@@ -8,25 +8,20 @@ import {
   OmitPartialGroupDMChannel,
   Partials,
 } from "discord.js";
-
 import { sendMessage, sendTimerMessage, MessageType } from "./messages";
 import { limitEmojis } from "./limitEmojis";
-import { messageHasImages, sendVisionReply } from "./vision"; // 👈 vision
 
-// -----------------------------
-// Config
-// -----------------------------
+// 👇 NEW: vision helpers
+import { messageHasImages, sendVisionReply } from "./vision";
+
 const app = express();
 const PORT = process.env.PORT || 3001;
-
 const RESPOND_TO_DMS = process.env.RESPOND_TO_DMS === "true";
 const RESPOND_TO_MENTIONS = process.env.RESPOND_TO_MENTIONS === "true";
 const RESPOND_TO_BOTS = process.env.RESPOND_TO_BOTS === "true";
 const RESPOND_TO_GENERIC = process.env.RESPOND_TO_GENERIC === "true";
-
-const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ""; // optional
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID; // Optional env var
 const MESSAGE_REPLY_TRUNCATE_LENGTH = 100;
-
 const ENABLE_TIMER = process.env.ENABLE_TIMER === "true";
 const TIMER_INTERVAL_MINUTES = parseInt(
   process.env.TIMER_INTERVAL_MINUTES || "15",
@@ -36,9 +31,6 @@ const FIRING_PROBABILITY = parseFloat(
   process.env.FIRING_PROBABILITY || "0.1"
 );
 
-// -----------------------------
-// Utils
-// -----------------------------
 function truncateMessage(message: string, maxLength: number): string {
   if (message.length > maxLength) {
     return message.substring(0, maxLength - 3) + "...";
@@ -46,25 +38,6 @@ function truncateMessage(message: string, maxLength: number): string {
   return message;
 }
 
-async function processAndSendMessage(
-  message: OmitPartialGroupDMChannel<Message<boolean>>,
-  messageType: MessageType
-) {
-  try {
-    const msg = await sendMessage(message, messageType);
-    if (msg !== "") {
-      const cleaned = limitEmojis(msg).slice(0, 2000);
-      await message.reply(cleaned);
-      console.log(`Message sent: ${cleaned}`);
-    }
-  } catch (error) {
-    console.error("🛑 Error processing and sending message:", error);
-  }
-}
-
-// -----------------------------
-// Discord Client
-// -----------------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -79,9 +52,46 @@ client.once("ready", () => {
   console.log(`🤖 Logged in as ${client.user?.tag}!`);
 });
 
-// -----------------------------
-// Randomized Event Timer
-// -----------------------------
+// Helper to reply with sanitized text (Keeping Discord 2k char limit)
+async function safeReply(
+  message: OmitPartialGroupDMChannel<Message<boolean>>,
+  text: string
+) {
+  const cleaned = limitEmojis(text).slice(0, 2000);
+  await message.reply(cleaned);
+  console.log(`Message sent: ${cleaned}`);
+}
+
+async function processAndSendMessage(
+  message: OmitPartialGroupDMChannel<Message<boolean>>,
+  messageType: MessageType
+) {
+  try {
+    // If there are image(s), route to vision (Letta multimodal)
+    if (messageHasImages(message as Message<boolean>)) {
+      try {
+        const reply = await sendVisionReply(message as Message<boolean>);
+        if (reply) {
+          await safeReply(message, reply);
+        }
+        return;
+      } catch (e) {
+        console.error("🛑 Vision reply failed, falling back to text:", e);
+        // If vision fails, fall back to your existing text flow
+      }
+    }
+
+    // Text-only (or vision fallback):
+    const msg = await sendMessage(message, messageType);
+    if (msg !== "") {
+      await safeReply(message, msg);
+    }
+  } catch (error) {
+    console.error("🛑 Error processing and sending message:", error);
+  }
+}
+
+// Randomized event timer
 async function startRandomEventTimer() {
   if (!ENABLE_TIMER) {
     console.log("Timer feature is disabled.");
@@ -98,13 +108,10 @@ async function startRandomEventTimer() {
     console.log(`⏰ Timer fired after ${randomMinutes} minutes`);
 
     if (Math.random() < FIRING_PROBABILITY) {
-      console.log(
-        `⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`
-      );
+      console.log(`⏰ Random event triggered (${FIRING_PROBABILITY * 100}% chance)`);
 
       let channel: { send: (content: string) => Promise<any> } | undefined =
         undefined;
-
       if (CHANNEL_ID) {
         try {
           const fetchedChannel = await client.channels.fetch(CHANNEL_ID);
@@ -145,11 +152,8 @@ async function startRandomEventTimer() {
   }, delay);
 }
 
-// -----------------------------
-// Message Handler
-// -----------------------------
+// Message handler
 client.on("messageCreate", async (message) => {
-  // Restrict to CHANNEL_ID (if set)
   if (CHANNEL_ID && message.channel.id !== CHANNEL_ID) {
     console.log(
       `📩 Ignoring message from other channels (only listening on channel=${CHANNEL_ID})...`
@@ -157,47 +161,24 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // Ignore self
   if (message.author.id === client.user?.id) {
     console.log(`📩 Ignoring message from myself...`);
     return;
   }
 
-  // Ignore other bots (unless enabled)
   if (message.author.bot && !RESPOND_TO_BOTS) {
     console.log(`📩 Ignoring other bot...`);
     return;
   }
 
-  // Ignore commands
   if (message.content.startsWith("!")) {
     console.log(`📩 Ignoring message that starts with !...`);
     return;
   }
 
-  // ---------- Vision short-circuit ----------
-  // If the message contains image attachments or linked image URLs,
-  // answer with a vision-capable agent and return.
-  if (messageHasImages(message)) {
-    try {
-      await message.channel.sendTyping();
-      const visionText = await sendVisionReply(message);
-      if (visionText) {
-        const cleaned = limitEmojis(visionText).slice(0, 2000);
-        await message.reply(cleaned);
-        return; // do not also run text flow
-      }
-    } catch (err) {
-      console.error("🛑 Vision error:", err);
-      // fall through to text logic if something went wrong
-    }
-  }
-
-  // ---------- DMs ----------
+  // DMs
   if (message.guild === null) {
-    console.log(
-      `📩 Received DM from ${message.author.username}: ${message.content}`
-    );
+    console.log(`📩 Received DM from ${message.author.username}: ${message.content}`);
     if (RESPOND_TO_DMS) {
       processAndSendMessage(message, MessageType.DM);
     } else {
@@ -206,7 +187,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // ---------- Mentions / Replies ----------
+  // Mentions or replies
   if (
     RESPOND_TO_MENTIONS &&
     (message.mentions.has(client.user || "") || message.reference)
@@ -239,13 +220,12 @@ client.on("messageCreate", async (message) => {
 
     const msg = await sendMessage(message, messageType);
     if (msg !== "") {
-      const cleaned = limitEmojis(msg).slice(0, 2000);
-      await message.reply(cleaned);
+      await safeReply(message, msg);
     }
     return;
   }
 
-  // ---------- Generic ----------
+  // Generic
   if (RESPOND_TO_GENERIC) {
     console.log(
       `📩 Received (non-mention) message from ${message.author.username}: ${message.content}`
@@ -255,9 +235,7 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-// -----------------------------
 // Start
-// -----------------------------
 app.listen(PORT, () => {
   console.log("Listening on port", PORT);
   client.login(process.env.DISCORD_TOKEN);
