@@ -1,4 +1,3 @@
-
 import { Client, Events } from "discord.js";
 import { LettaClient } from "@letta-ai/letta-client";
 import axios from "axios";
@@ -29,7 +28,9 @@ function extractAssistantText(ns: any): string {
     }
     if (!out && typeof ns?.content === 'string') return ns.content;
     return out;
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -37,44 +38,43 @@ function extractAssistantText(ns: any): string {
  * and replies with the agent response in the same thread.
  */
 export function registerAttachmentForwarder(client: Client) {
-  try { console.log('📦 AttachmentForwarder loaded (with typing + compression + multi-image)'); } catch {}
+  try { console.log('📦 AttachmentForwarder loaded (with typing + compression + multi-image + robust parsing)'); } catch {}
+  
   client.on(Events.MessageCreate, async (msg) => {
-    // Ignore bot messages
     if (msg.author.bot) return;
+    if (!msg.attachments?.size) return;
 
-  // No attachments? skip
-  if (!msg.attachments?.size) return;
-
-  // Collect image URLs
-  const urls: string[] = [];
-  for (const [, att] of msg.attachments) {
-    const ct = (att as any).contentType || (att as any).content_type || '';
-    const url = (att as any).url || (att as any).proxyURL;
-    if (ct && typeof ct === 'string' && ct.startsWith('image/') && url) {
-      urls.push(String(url));
-    }
-  }
-  if (urls.length === 0) return;
-
-  try {
-    // show typing while processing
-    try { await (msg.channel as any).sendTyping(); } catch {}
-    const typingInterval = setInterval(() => {
-      try { (msg.channel as any).sendTyping(); } catch {}
-    }, 8000);
-    try {
-      const userText = (msg.content || '').trim();
-      const reply = await forwardImagesToLetta(urls, msg.author.id, userText);
-      if (reply && reply.trim()) {
-        try { await msg.reply(reply); } catch {}
+    const urls: string[] = [];
+    for (const [, att] of msg.attachments) {
+      const ct = (att as any).contentType || (att as any).content_type || '';
+      const url = (att as any).url || (att as any).proxyURL;
+      if (ct && typeof ct === 'string' && ct.startsWith('image/') && url) {
+        urls.push(String(url));
       }
-    } finally {
-      clearInterval(typingInterval);
     }
-  } catch (err) {
-    console.error("Image forward failed:", err);
-    try { await msg.reply("❌ Couldn’t process the image."); } catch {}
-  }
+    if (urls.length === 0) return;
+
+    try {
+      await (msg.channel as any).sendTyping();
+      const typingInterval = setInterval(() => {
+        try { (msg.channel as any).sendTyping(); } catch {}
+      }, 8000);
+
+      try {
+        const userText = (msg.content || '').trim();
+        const reply = await forwardImagesToLetta(urls, msg.author.id, userText);
+        if (reply && reply.trim()) {
+          try { await msg.reply(reply); } catch {}
+        } else {
+          await msg.reply("⚠️ The image was processed, but no description was returned.");
+        }
+      } finally {
+        clearInterval(typingInterval);
+      }
+    } catch (err) {
+      console.error("Image forward failed:", err);
+      try { await msg.reply("❌ Couldn’t process the image."); } catch {}
+    }
   });
 }
 
@@ -98,132 +98,108 @@ async function forwardImagesToLetta(
         role: "user",
         content: [
           ...urls.map(u => ({ type: 'image', source: { type: 'url', url: u } })),
-          ...(userText && userText.trim() ? [ { type: 'text', text: userText } ] : [ { type: 'text', text: `Describe the image sent by user ${userId}.` } ])
+          ...(userText && userText.trim()
+            ? [{ type: 'text', text: userText }]
+            : [{ type: 'text', text: `Describe the image sent by user ${userId}.` }])
         ]
       }
     ]
   };
-  try { console.log(`🧾 Payload(url): images=${urls.length}, hasText=${!!(userText && userText.trim())}`); } catch {}
 
-  // Non-stream for simplicity
   try {
+    console.log(`🧾 Payload(url): images=${urls.length}, hasText=${!!(userText && userText.trim())}`);
     const ns: any = await (client as any).agents.messages.create(agentId, payloadUrl as any);
-    const text = extractAssistantText(ns);
-    return text || '';
+
+    // 🔧 improved parsing logic
+    let text = extractAssistantText(ns);
+    if (!text && ns?.messages) {
+      for (const m of ns.messages) {
+        if (m.content && Array.isArray(m.content)) {
+          for (const c of m.content) {
+            if (c.text) text += c.text;
+          }
+        }
+      }
+    }
+
+    return text?.trim() || '⚠️ The image was processed, but no description was returned.';
   } catch (e: any) {
-    const status = e?.status || e?.response?.status;
-    console.error('URL image send failed; attempting base64 fallback', { status });
-    try {
-      // compress ALL images to base64 under 5MB each (no remote fetch), keeping text
-      const MAX = 5 * 1024 * 1024; // 5 MB per image
-      const base64Images: any[] = [];
-      for (let i = 0; i < urls.length; i++) {
-        const u = urls[i];
-        const res = await axios.get(u, { responseType: 'arraybuffer', timeout: 20000, maxContentLength: 25 * 1024 * 1024 });
-        let mediaType = ((res.headers['content-type'] as string) || 'image/jpeg');
-        let buf = Buffer.from(res.data);
-        console.log(`🗜️  [${i+1}/${urls.length}] start: ${Math.round(buf.length/1024)}KB ct=${mediaType}`);
+    console.error('Image send failed; attempting compression fallback', e);
+    return handleCompressionFallback(client, urls, userId, userText, agentId);
+  }
+}
+
+async function handleCompressionFallback(
+  client: any,
+  urls: string[],
+  userId: string,
+  userText: string | undefined,
+  agentId: string
+): Promise<string> {
+  const MAX = 5 * 1024 * 1024; // 5MB per image
+  const base64Images: any[] = [];
+
+  for (let i = 0; i < urls.length; i++) {
+    const u = urls[i];
+    const res = await axios.get(u, { responseType: 'arraybuffer', timeout: 20000 });
+    let mediaType = ((res.headers['content-type'] as string) || 'image/jpeg');
+    let buf = Buffer.from(res.data);
+
+    if (buf.length > MAX) {
+      let width = 1400;
+      let quality = 70;
+      let fmt: 'webp' | 'jpeg' = 'webp';
+      let attempts = 0;
+
+      while (buf.length > MAX && attempts < 10) {
+        const pipeline = sharp(buf).rotate().resize({ width, withoutEnlargement: true });
+        buf = fmt === 'webp'
+          ? await pipeline.webp({ quality }).toBuffer()
+          : await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
+
+        mediaType = fmt === 'webp' ? 'image/webp' : 'image/jpeg';
         if (buf.length > MAX) {
-          let width = 1400;
-          let quality = 70;
-          let fmt: 'webp' | 'jpeg' = 'webp';
-          let attempts = 0;
-          while (buf.length > MAX && attempts < 10) {
-            const pipeline = sharp(buf).rotate().resize({ width, withoutEnlargement: true });
-            const out = fmt === 'webp'
-              ? await pipeline.webp({ quality }).toBuffer()
-              : await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
-            console.log(`🗜️  [${i+1}] attempt #${attempts+1}: fmt=${fmt}, width=${width}, quality=${quality} → ${Math.round(out.length/1024)}KB`);
-            buf = out;
-            mediaType = fmt === 'webp' ? 'image/webp' : 'image/jpeg';
-            if (buf.length > MAX) {
-              if (quality > 40) {
-                quality = Math.max(35, quality - 10);
-              } else if (width > 640) {
-                width = Math.max(640, Math.floor(width * 0.8));
-              } else if (fmt === 'webp') {
-                fmt = 'jpeg';
-                quality = 55;
-                width = Math.min(width, 1024);
-              } else {
-                quality = Math.max(30, quality - 5);
-                width = Math.max(480, Math.floor(width * 0.85));
-              }
-            }
-            attempts += 1;
-          }
-          if (buf.length > MAX) {
-            throw new Error(`compressed image #${i+1} still exceeds 5MB (${Math.round(buf.length/1024)}KB)`);
-          }
-          console.log(`🗜️  [${i+1}] final=${Math.round(buf.length/1024)}KB type=${mediaType}`);
+          if (quality > 40) quality -= 10;
+          else if (width > 640) width = Math.floor(width * 0.8);
+          else fmt = 'jpeg';
         }
-        base64Images.push({ type: 'image', source: { type: 'base64', mediaType, data: buf.toString('base64') } });
+        attempts++;
       }
-      try { console.log(`📦 Payload(base64 only): images=${base64Images.length}, hasText=${!!(userText && userText.trim())}`); } catch {}
-      const payloadB64: any = {
-        messages: [
-          {
-            role: 'user',
-            content: [
-              ...base64Images,
-              ...(userText && userText.trim() ? [ { type: 'text', text: userText } ] : [ { type: 'text', text: `Describe the image sent by user ${userId}.` } ])
-            ]
-          }
+    }
+
+    base64Images.push({
+      type: 'image',
+      source: { type: 'base64', mediaType, data: buf.toString('base64') }
+    });
+  }
+
+  const payloadB64: any = {
+    messages: [
+      {
+        role: 'user',
+        content: [
+          ...base64Images,
+          ...(userText && userText.trim()
+            ? [{ type: 'text', text: userText }]
+            : [{ type: 'text', text: `Describe the image sent by user ${userId}.` }])
         ]
-      };
-      const ns2: any = await (client as any).agents.messages.create(agentId, payloadB64 as any);
-      const text2 = extractAssistantText(ns2);
-      return text2 || '';
-    } catch (e2: any) {
-      const detail = (e2?.body?.detail || e2?.response?.data || e2?.message || '').toString();
-      console.error('Base64 fallback failed', e2);
-      // Adaptive retry: if server says >5MB, compress further and retry once or twice
-      if (/exceeds\s*5\s*MB/i.test(detail)) {
-        try {
-          // First adaptive step: WEBP 720px q=40
-          const firstUrl = urls[0];
-          const res2 = await axios.get(firstUrl, { responseType: 'arraybuffer', timeout: 15000 });
-          const orig2 = Buffer.from(res2.data);
-          console.log(`🗜️  Adaptive retry start: orig=${Math.round(orig2.length/1024)}KB`);
-          let buf = await sharp(orig2)
-            .rotate()
-            .resize({ width: 720, withoutEnlargement: true })
-            .webp({ quality: 40 })
-            .toBuffer();
-          console.log(`🗜️  Adaptive step 1 (webp,720,q40): ${Math.round(buf.length/1024)}KB`);
-          if (buf.length > 5 * 1024 * 1024) {
-            // Second adaptive step: JPEG 512px q=40
-            buf = await sharp(orig2)
-              .rotate()
-              .resize({ width: 512, withoutEnlargement: true })
-              .jpeg({ quality: 40, mozjpeg: true })
-              .toBuffer();
-            console.log(`🗜️  Adaptive step 2 (jpeg,512,q40): ${Math.round(buf.length/1024)}KB`);
-          }
-          if (buf.length > 5 * 1024 * 1024) {
-            throw new Error(`adaptive compression still >5MB (${Math.round(buf.length/1024)}KB)`);
-          }
-          const data2 = buf.toString('base64');
-          const payloadRetry: any = {
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  { type: 'image', source: { type: 'base64', mediaType: buf.length < 5 ? 'image/webp' : 'image/jpeg', data: data2 } },
-                  ...urls.slice(1).map(u => ({ type: 'image', source: { type: 'url', url: u } })),
-                  ...(userText && userText.trim() ? [ { type: 'text', text: userText } ] : [ { type: 'text', text: `Describe the image sent by user ${userId}.` } ])
-                ]
-              }
-            ]
-          };
-          const nsRetry: any = await (client as any).agents.messages.create(agentId, payloadRetry as any);
-          const textRetry = extractAssistantText(nsRetry);
-          return textRetry || '';
-        } catch (e3) {
-          console.error('Adaptive compression retry failed', e3);
+      }
+    ]
+  };
+
+  const ns2: any = await (client as any).agents.messages.create(agentId, payloadB64 as any);
+  let text2 = extractAssistantText(ns2);
+
+  // 🔧 fallback improved parsing
+  if (!text2 && ns2?.messages) {
+    for (const m of ns2.messages) {
+      if (m.content && Array.isArray(m.content)) {
+        for (const c of m.content) {
+          if (c.text) text2 += c.text;
         }
       }
-      throw e2;
     }
   }
+
+  return text2?.trim() || '⚠️ The image was processed, but no description was returned.';
 }
