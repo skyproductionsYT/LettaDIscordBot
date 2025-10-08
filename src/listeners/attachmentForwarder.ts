@@ -4,7 +4,26 @@ import { LettaClient } from "@letta-ai/letta-client";
 import axios from "axios";
 import sharp from "sharp";
 
+// ---- Tunables ---------------------------------------------------------------
+const INITIAL_GRACE_MS = 800;     // first small pause before checking attachments
+const POLL_INTERVAL_MS = 800;     // how often to poll message for attachments
+const MAX_WAIT_MS = 12_000;       // max total wait for attachments to show up
+const REPLY_MAX = 2000;           // Discord message char limit
+const DEDUPE_TTL_MS = 60_000;     // how long to remember a processed msg id
+// ----------------------------------------------------------------------------
+
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+// Simple dedupe cache with TTL
+const processed = new Map<string, number>();
+function alreadyProcessed(id: string): boolean {
+  const now = Date.now();
+  // Cleanup expired
+  for (const [k, t] of processed) if (now > t) processed.delete(k);
+  if (processed.has(id)) return true;
+  processed.set(id, now + DEDUPE_TTL_MS);
+  return false;
+}
 
 function extractAssistantText(ns: any): string {
   try {
@@ -43,17 +62,15 @@ function hasImageAttachment(msg: Message<boolean>): boolean {
 }
 
 /** Wait briefly in case Discord is still attaching images to the message */
-async function waitForAttachments(msg: Message<boolean>, maxMs = 12000): Promise<boolean> {
+async function waitForAttachments(msg: Message<boolean>, maxMs = MAX_WAIT_MS): Promise<boolean> {
   const start = Date.now();
   if (hasImageAttachment(msg)) return true;
 
-  // small initial grace period (Discord can deliver the event a tick before attachments are visible)
-  await sleep(800);
+  await sleep(INITIAL_GRACE_MS);
   if (hasImageAttachment(msg)) return true;
 
-  // poll a few times
   while (Date.now() - start < maxMs) {
-    await sleep(800);
+    await sleep(POLL_INTERVAL_MS);
     const fresh = await msg.channel.messages.fetch(msg.id).catch(() => null);
     if (fresh && hasImageAttachment(fresh)) return true;
   }
@@ -61,17 +78,20 @@ async function waitForAttachments(msg: Message<boolean>, maxMs = 12000): Promise
 }
 
 export function registerAttachmentForwarder(client: Client) {
-  console.log("📦 AttachmentForwarder loaded (typing + compression + multi-image)");
+  console.log("📦 AttachmentForwarder loaded (typing + compression + multi-image + dedupe)");
 
   client.on(Events.MessageCreate, async (msg) => {
     try {
       if (msg.author.bot) return;
 
-      // Bail if there are no images now and none show up shortly.
+      // Prevent double-processing (Discord edits / multiple handlers / retries)
+      if (alreadyProcessed(msg.id)) return;
+
+      // Wait for attachments if needed
       const ready = await waitForAttachments(msg);
       if (!ready) return;
 
-      // Gather image URLs
+      // Collect image URLs
       const urls: string[] = [];
       for (const [, att] of msg.attachments) {
         const ct = (att as any).contentType || (att as any).content_type || "";
@@ -82,7 +102,7 @@ export function registerAttachmentForwarder(client: Client) {
       }
       if (urls.length === 0) return;
 
-      // keep typing while we work
+      // Keep typing while working
       try { await msg.channel.sendTyping(); } catch {}
       const typingInterval = setInterval(() => {
         try { (msg.channel as any).sendTyping(); } catch {}
@@ -91,7 +111,8 @@ export function registerAttachmentForwarder(client: Client) {
       try {
         const userText = (msg.content || "").trim();
         const reply = await forwardImagesToLetta(urls, msg.author.id, userText);
-        if (reply?.trim()) await msg.reply(reply.trim().slice(0, 2000));
+        const trimmed = (reply || "").trim().slice(0, REPLY_MAX);
+        if (trimmed) await msg.reply(trimmed);
       } finally {
         clearInterval(typingInterval);
       }
@@ -114,6 +135,7 @@ async function forwardImagesToLetta(
 
   const client = new LettaClient({ token, baseUrl } as any);
 
+  // First try: URL payload (cheaper/faster)
   const payloadUrl: any = {
     messages: [
       {
